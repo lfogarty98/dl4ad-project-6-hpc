@@ -1,0 +1,33 @@
+schema: '2.0'
+stages:
+  pipeline:
+    cmd: python source/model.py
+    deps:
+    - path: data/raw/
+      hash: md5
+      md5: 11e98e28e501d585f6c8a0c05503a1b4.dir
+      size: 16770049
+      nfiles: 10
+    - path: source/model.py
+      hash: md5
+      md5: 2f7ef7cbfa15529b1648a1b3b130842f
+      size: 7200
+    params:
+      params.yaml:
+        general.audio_dir: data/raw/separated_jazz_track_stems
+        general.batch_size: 16
+        general.buffer_size: 128
+        general.epochs: 10
+        general.hidden_size: 20
+        general.hop_length: n_fft
+        general.learning_rate: 0.01
+        general.midi_dir: data/raw/separated_jazz_track_midi
+        general.n_fft: 1024
+        general.num_lstm_layers: 2
+        general.win_length: n_fft
+    outs:
+    - path: model/checkpoints/
+      hash: md5
+      md5: d751713988987e9331980363e24189ce.dir
+      size: 0
+      nfiles: 0

@@ -1,46 +1,66 @@
 stages:
-  preprocess:
-    cmd: python source/preprocess.py
+  pipeline:
+    cmd: python source/model.py
     deps:
-    - source/preprocess.py
+    - source/model.py
     - data/raw/
     params:
-    - general.input_size
-    - preprocess.input_file
-    - preprocess.target_file
-    - preprocess.test_split
+    - general.buffer_size
+    - general.n_fft
+    - general.win_length
+    - general.hop_length
+    - general.hidden_size
+    - general.num_lstm_layers
+    - general.epochs
+    - general.batch_size
+    - general.learning_rate
+    - general.audio_dir
+    - general.midi_dir
     outs:
-    - data/processed/
-  train:
-    cmd: python source/train.py
-    deps:
-    - source/train.py
-    - source/model.py
-    - data/processed/
-    params:
-    - general.input_size
-    - general.random_seed
-    - model.conv1d_strides
-    - model.conv1d_filters
-    - model.hidden_units
-    - train.batch_size
-    - train.learning_rate
-    - train.epochs
-    - train.device_request
-    outs:
-    - models/checkpoints/
-  export:
-    cmd: python source/export.py
-    deps:
-    - source/export.py
-    - models/checkpoints/
-    params:
-    - general.input_size
-    outs:
-    - models/exports/
-  save_logs:
-    cmd: python source/utils/logs.py
-    deps:
-    - source/utils/logs.py
-    outs:
-    - exp_logs/
+    - model/checkpoints/
+# stages:
+#   preprocess:
+#     cmd: python source/preprocess.py
+#     deps:
+#     - source/preprocess.py
+#     - data/raw/
+#     params:
+#     - general.input_size
+#     - preprocess.input_file
+#     - preprocess.target_file
+#     - preprocess.test_split
+#     outs:
+#     - data/processed/
+#   train:
+#     cmd: python source/train.py
+#     deps:
+#     - source/train.py
+#     - source/model.py
+#     - data/processed/
+#     params:
+#     - general.input_size
+#     - general.random_seed
+#     - model.conv1d_strides
+#     - model.conv1d_filters
+#     - model.hidden_units
+#     - train.batch_size
+#     - train.learning_rate
+#     - train.epochs
+#     - train.device_request
+#     outs:
+#     - models/checkpoints/
+#   export:
+#     cmd: python source/export.py
+#     deps:
+#     - source/export.py
+#     - models/checkpoints/
+#     params:
+#     - general.input_size
+#     outs:
+#     - models/exports/
+#   save_logs:
+#     cmd: python source/utils/logs.py
+#     deps:
+#     - source/utils/logs.py
+#     outs:
+#     - exp_logs/

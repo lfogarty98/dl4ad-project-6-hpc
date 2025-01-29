@@ -1,16 +1,37 @@
 general:
-  random_seed: 42
-  input_size: 150
-preprocess:
-  input_file: '/../data/raw/ts9_test1_in_FP32.wav'
-  target_file: '/../data/raw/ts9_test1_out_FP32.wav'
-  test_split: 0.2
-model:
-  conv1d_strides: 12
-  conv1d_filters: 16
-  hidden_units: 36
-train:
-  batch_size: 4096 
-  learning_rate: 0.01
-  epochs: 1
-  device_request: 'cuda'   
+  buffer_size: 128
+
+  ## Parameters for the spectrogram ##
+  n_fft: 1024  # Size of the FFT window
+  win_length: n_fft  # Window length (can be same as n_fft)
+  hop_length: n_fft  # Hop length equal to n_fft (no overlap)
+
+  ## Parameters for the network ##
+  hidden_size: 20  # Number of hidden units in the RNN
+  num_lstm_layers: 2  # Number of LSTM layers in the RNN
+
+  ## Parameters for training ##
+  epochs: 10  # Number of epochs to train the model
+  batch_size: 16  # Batch size for training
+  learning_rate: 0.01  # Learning rate for the optimizer
+
+  ## Parameters for the data ##
+  audio_dir: 'data/raw/separated_jazz_track_stems'  # Directory containing the audio files
+  midi_dir: 'data/raw/separated_jazz_track_midi'  # Directory containing the MIDI files
+
+# general:
+#   random_seed: 42
+#   input_size: 150
+# preprocess:
+#   input_file: '/../data/raw/input.mp3'
+#   target_file: '/../data/raw/output.mp3'
+#   test_split: 0.2
+# model:
+#   conv1d_strides: 12
+#   conv1d_filters: 16
+#   hidden_units: 36
+# train:
+#   batch_size: 4096 
+#   learning_rate: 0.01
+#   epochs: 1
+#   device_request: 'cuda'   
