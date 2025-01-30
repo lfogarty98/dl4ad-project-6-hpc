@@ -178,7 +178,6 @@ def main():
     # Create checkpoint directory
     ckt_dir = "models/checkpoints"
     os.makedirs(ckt_dir, exist_ok=True)
-    breakpoint()
     
     # Save model
     torch.save(model, os.path.join(ckt_dir, "rnn_model_full.pth"))

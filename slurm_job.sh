@@ -5,7 +5,7 @@
 # See the LICENSE file in the root of this project for details.
 
 # Job name and logs
-#SBATCH -J tustu
+#SBATCH -J dl4ad-project-6
 #SBATCH --output=./logs/slurm/slurm-%j.out
 
 # Resources needed
