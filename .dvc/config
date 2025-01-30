@@ -3,8 +3,7 @@
 [cache]
     shared = group
     type = symlink
+    dir = /home/app/.dvc/cache
 ['remote "myremote"']
-    url = webdavs://tubcloud.tu-berlin.de/remote.php/dav/files/<folder-path>
-    # or for ssh
-    # url = ssh://<ssh-alias>:</path/to/remote/directory>
+    url = webdavs://tubcloud.tu-berlin.de/remote.php/dav/files/c3b296f4-e892-103c-891f-d5e9b8a711df
     timeout = 600
