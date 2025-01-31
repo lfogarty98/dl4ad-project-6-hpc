@@ -1,4 +1,5 @@
 import torch
+import torch.nn as nn
 import torchinfo
 from utils import logs, config
 from pathlib import Path
@@ -38,33 +39,30 @@ def test_epoch(dataloader, model, loss_fn, device, writer):
     print(f"Test Error: \n Avg loss: {test_loss:>8f} \n")
     return test_loss
 
-def generate_audio_examples(model, device, dataloader):
-    print("Running audio prediction...")
-    prediction = torch.zeros(0).to(device)
-    target = torch.zeros(0).to(device)
-    with torch.no_grad():
-        for X, y in dataloader:
-            X = X.to(device)
-            y = y.to(device)
-            predicted_batch = model(X)
-            prediction = torch.cat((prediction, predicted_batch.flatten()), 0)
-            target = torch.cat((target, y.flatten()), 0)
-    return prediction, target
+# def predictions_to_midi():
+#     # TODO: Implement this function
+#     pass
+
+def reshape_and_batch(X, Y):
+    # Add batch dimension to Y
+    Y = Y.unsqueeze(0) # Shape: (1, 128, num_frames)
+    # Reshape tensors 
+    X = X.permute(2, 0, 1)  # Shape: (num_frames, 1, num_freq_bins)
+    Y = Y.permute(2, 0, 1)  # Shape: (num_frames, 1, 128)
+    return X, Y
 
 def main():
     # Load the hyperparameters from the params yaml file into a Dictionary
     params = config.Params()
 
     # Load the parameters from the dictionary into variables
-    input_size = params['general']['input_size']
     random_seed = params['general']['random_seed']
     epochs = params['train']['epochs']
     batch_size = params['train']['batch_size']
     learning_rate = params['train']['learning_rate']
     device_request = params['train']['device_request']
-    conv1d_strides = params['model']['conv1d_strides']
-    conv1d_filters = params['model']['conv1d_filters']
-    hidden_units = params['model']['hidden_units']
+    hidden_size = params['model']['hidden_size']
+    num_lstm_layers = params['model']['num_lstm_layers']
 
     # Create a SummaryWriter object to write the tensorboard logs
     tensorboard_path = logs.return_tensorboard_path()
@@ -79,28 +77,40 @@ def main():
     # Load preprocessed data from the input file into the training and testing tensors
     input_file_path = Path('data/processed/data.pt')
     data = torch.load(input_file_path)
-    X_ordered_training = data['X_ordered_training']
-    y_ordered_training = data['y_ordered_training']
-    X_ordered_testing = data['X_ordered_testing']
-    y_ordered_testing = data['y_ordered_testing']
-
+    X_training = data['X_training']
+    Y_training = data['Y_training']
+    X_testing = data['X_testing']
+    Y_testing = data['Y_testing']
+    
+    
     # Create the model
-    model = NeuralNetwork(conv1d_filters, conv1d_strides, hidden_units).to(device)
-    summary = torchinfo.summary(model, (1, 1, input_size), device=device)
+    num_freq_bins = X_training.shape[1] # X has shape (1, num_freq_bins, total_num_frames) (assuming mono audio)
+    num_frames = X_training.shape[-1]
+    num_midi_classes = 128
+    model = NeuralNetwork(input_dim=num_freq_bins, hidden_dim=hidden_size, num_lstm_layers=num_lstm_layers, output_dim=num_midi_classes)
+    
+    # Print the model summary
+    input_size = (num_frames, 1, num_freq_bins)
+    summary = torchinfo.summary(model, input_size, device=device)
     print(summary)
 
     # Add the model graph to the tensorboard logs
-    sample_inputs = torch.randn(1, 1, input_size) 
+    sample_inputs = torch.randn(input_size) 
+    breakpoint()
     writer.add_graph(model, sample_inputs.to(device))
 
     # Define the loss function and the optimizer
     loss_fn = torch.nn.MSELoss(reduction='mean')
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 
+    # Reshape data for the model training
+    X_training, Y_training = reshape_and_batch(X_training, Y_training)
+    X_testing, Y_testing = reshape_and_batch(X_testing, Y_testing)
+
     # Create the dataloaders
-    training_dataset = torch.utils.data.TensorDataset(X_ordered_training, y_ordered_training)
-    training_dataloader = torch.utils.data.DataLoader(training_dataset, batch_size=batch_size, shuffle=True)
-    testing_dataset = torch.utils.data.TensorDataset(X_ordered_testing, y_ordered_testing)
+    training_dataset = torch.utils.data.TensorDataset(X_training, Y_training)
+    training_dataloader = torch.utils.data.DataLoader(training_dataset, batch_size=batch_size, shuffle=False) # NOTE: does it make sense to shuffle?
+    testing_dataset = torch.utils.data.TensorDataset(X_testing, Y_testing)
     testing_dataloader = torch.utils.data.DataLoader(testing_dataset, batch_size=batch_size, shuffle=False)
 
     # Training loop
@@ -108,11 +118,12 @@ def main():
         print(f"Epoch {t+1}\n-------------------------------")
         epoch_loss_train = train_epoch(training_dataloader, model, loss_fn, optimizer, device, writer, epoch=t)
         epoch_loss_test = test_epoch(testing_dataloader, model, loss_fn, device, writer)
-        epoch_audio_prediction, epoch_audio_target  = generate_audio_examples(model, device, testing_dataloader)
+        # TODO: replace with midi prediction
+        # epoch_audio_prediction, epoch_audio_target  = generate_audio_examples(model, device, testing_dataloader)
         writer.add_scalar("Epoch_Loss/train", epoch_loss_train, t)
         writer.add_scalar("Epoch_Loss/test", epoch_loss_test, t)
-        writer.add_audio("Audio/prediction", epoch_audio_prediction, t, sample_rate=44100)
-        writer.add_audio("Audio/target", epoch_audio_target, t, sample_rate=44100)        
+        # writer.add_audio("Audio/prediction", epoch_audio_prediction, t, sample_rate=44100)
+        # writer.add_audio("Audio/target", epoch_audio_target, t, sample_rate=44100)        
         writer.step()  
 
     writer.close()

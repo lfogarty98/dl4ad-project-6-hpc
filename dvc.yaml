@@ -1,21 +1,30 @@
 stages:
-  pipeline:
-    cmd: python source/model.py
+  preprocess:
+    cmd: python source/preprocess.py
     deps:
-    - source/model.py
+    - source/preprocess.py
     - data/raw/
     params:
-    - general.buffer_size
-    - general.n_fft
-    - general.win_length
-    - general.hop_length
-    - general.hidden_size
-    - general.num_lstm_layers
-    - general.epochs
-    - general.batch_size
-    - general.learning_rate
-    - general.audio_dir
-    - general.midi_dir
+    - preprocess.buffer_size
+    - preprocess.n_fft
+    - preprocess.win_length
+    - preprocess.hop_length
+    - preprocess.audio_dir
+    - preprocess.midi_dir
+    outs:
+    - data/processed/
+  train:
+    cmd: python source/train.py
+    deps:
+    - source/train.py
+    - source/model.py
+    - data/processed/
+    params:
+    - model.hidden_size
+    - model.num_lstm_layers
+    - train.epochs
+    - train.batch_size
+    - train.learning_rate
     outs:
     - models/checkpoints/
 # stages:
