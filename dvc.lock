@@ -1,0 +1,57 @@
+schema: '2.0'
+stages:
+  preprocess:
+    cmd: python source/preprocess.py
+    deps:
+    - path: data/raw/
+      hash: md5
+      md5: 11e98e28e501d585f6c8a0c05503a1b4.dir
+      size: 16770049
+      nfiles: 10
+    - path: source/preprocess.py
+      hash: md5
+      md5: 67c69e93ed04b45ccb6a04a4e1a51b27
+      size: 4924
+    params:
+      params.yaml:
+        preprocess.audio_dir: data/raw/separated_jazz_track_stems
+        preprocess.buffer_size: 128
+        preprocess.hop_length: 1024
+        preprocess.midi_dir: data/raw/midi_solos
+        preprocess.n_fft: 1024
+        preprocess.win_length: 1024
+    outs:
+    - path: data/processed/
+      hash: md5
+      md5: 9a3ce2e4a0b4fe2b60a20bb73673509a.dir
+      size: 106669062
+      nfiles: 1
+  train:
+    cmd: python source/train.py
+    deps:
+    - path: data/processed/
+      hash: md5
+      md5: 9a3ce2e4a0b4fe2b60a20bb73673509a.dir
+      size: 106669062
+      nfiles: 1
+    - path: source/model.py
+      hash: md5
+      md5: bcfde965bc78e5e9e0180cf5a05be24d
+      size: 493
+    - path: source/train.py
+      hash: md5
+      md5: 4387bcbde0d1c3403bcbf50a5f2b3bdc
+      size: 5810
+    params:
+      params.yaml:
+        model.hidden_size: 20
+        model.num_lstm_layers: 2
+        train.batch_size: 16
+        train.epochs: 3
+        train.learning_rate: 0.01
+    outs:
+    - path: models/checkpoints/
+      hash: md5
+      md5: 46a74b2a1de5c0aab82fee2f1a85725b.dir
+      size: 198364
+      nfiles: 1
