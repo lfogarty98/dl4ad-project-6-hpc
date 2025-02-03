@@ -36,9 +36,9 @@ stages:
 #     - general.input_size
 #     outs:
 #     - models/exports/
-#   save_logs:
-#     cmd: python source/utils/logs.py
-#     deps:
-#     - source/utils/logs.py
-#     outs:
-#     - exp_logs/
+  save_logs:
+    cmd: python source/utils/logs.py
+    deps:
+    - source/utils/logs.py
+    outs:
+    - exp_logs/
