@@ -82,7 +82,6 @@ onnx==1.17.0
 orjson==3.10.12
 packaging==24.2
 pathspec==0.12.1
-pedalboard==0.9.16
 platformdirs==4.3.6
 pretty_midi==0.2.9
 prompt_toolkit==3.0.48
