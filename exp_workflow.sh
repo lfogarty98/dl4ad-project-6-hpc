@@ -50,7 +50,8 @@ fi;
 echo ".git";
 } | while read file; do
     # --chown flag is needed for docker to avoid permission issues
-    rsync -aR --chown $(id -u):$(id -g) "$file" $TUSTU_EXP_TMP_DIR;
+    # rsync -aR --chown $(id -u):$(id -g) "$file" $TUSTU_EXP_TMP_DIR;
+    rsync -aR "$file" $TUSTU_EXP_TMP_DIR;
 done &&
 
 # Change the working directory to the temporary sub-directory
