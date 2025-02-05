@@ -26,3 +26,32 @@ stages:
       md5: 9a3ce2e4a0b4fe2b60a20bb73673509a.dir
       size: 106669062
       nfiles: 1
+  train:
+    cmd: python source/train.py
+    deps:
+    - path: data/processed/
+      hash: md5
+      md5: 9a3ce2e4a0b4fe2b60a20bb73673509a.dir
+      size: 106669062
+      nfiles: 1
+    - path: source/model.py
+      hash: md5
+      md5: bcfde965bc78e5e9e0180cf5a05be24d
+      size: 493
+    - path: source/train.py
+      hash: md5
+      md5: 4387bcbde0d1c3403bcbf50a5f2b3bdc
+      size: 5810
+    params:
+      params.yaml:
+        model.hidden_size: 20
+        model.num_lstm_layers: 2
+        train.batch_size: 16
+        train.epochs: 3
+        train.learning_rate: 0.01
+    outs:
+    - path: models/checkpoints/
+      hash: md5
+      md5: 46a74b2a1de5c0aab82fee2f1a85725b.dir
+      size: 198364
+      nfiles: 1
