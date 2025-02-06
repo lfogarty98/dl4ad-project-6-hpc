@@ -18,6 +18,9 @@ def split_data(data, test_split):
     return np.split(data, [split_idx], axis=-1)
 
 def audio_to_spectrogram(audio_file, spectrogram_transform):
+    """
+    Takes an audio file and returns the corresponding spectrogram.
+    """
     waveform, sample_rate = torchaudio.load(audio_file)
     # Check if the audio is stereo (multi-channel) and convert to mono
     if waveform.shape[0] > 1:
@@ -28,6 +31,10 @@ def audio_to_spectrogram(audio_file, spectrogram_transform):
     return specgram, sample_rate
 
 def midi_to_piano_roll(midi_file, fs):
+    """
+    Takes a MIDI file and returns the corresponding piano roll matrix.
+    Matrix entries correspond to the velocity of the note played at that time.
+    """
     midi_data = pretty_midi.PrettyMIDI(midi_file)
     print(f'MIDI filepath: {midi_file})')
     print(f"Duration of MIDI file: {midi_data.get_end_time()} seconds ")
@@ -36,6 +43,11 @@ def midi_to_piano_roll(midi_file, fs):
     return piano_roll
 
 def prepare_data(audio_files, midi_files, spectrogram_transform):
+    """
+    Prepares the data for training by computing spectrograms and piano rolls.
+    Normalizes the piano roll velocity values to [0, 1].
+    # NOTE: spectrogram values are not normalized.
+    """
     X, Y = [], []
     for audio_file, midi_file in zip(audio_files, midi_files):
         
@@ -97,7 +109,6 @@ def main():
     audio_files = [os.path.join(audio_dir, filename) for filename in os.listdir(audio_dir)]
     midi_files = [os.path.join(midi_dir, filename) for filename in os.listdir(midi_dir)]
 
-    # TODO: normalize specgram values?
     X, Y = prepare_data(audio_files, midi_files, spectrogram_transform)
     print("Data loaded and normalized.")
 
