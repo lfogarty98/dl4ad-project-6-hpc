@@ -84,18 +84,16 @@ def main():
     
     # Create the model
     num_freq_bins = X_training.shape[1] # X has shape (1, num_freq_bins, total_num_frames) (assuming mono audio)
-    num_frames = X_training.shape[-1]
     num_midi_classes = 128
     model = NeuralNetwork(input_dim=num_freq_bins, hidden_dim=hidden_size, num_lstm_layers=num_lstm_layers, output_dim=num_midi_classes)
     
     # Reshape data for the model training
     X_training, Y_training = reshape_and_batch(X_training, Y_training)
     X_testing, Y_testing = reshape_and_batch(X_testing, Y_testing)
-    
+
     # Print the model summary
-    input_size = (num_frames, 1, num_freq_bins) # shape compliant with the model input
+    input_size = (batch_size, 1, num_freq_bins) # shape compliant with the model input
     summary = torchinfo.summary(model, input_size, device=device)
-    print(summary)
 
     # Add the model graph to the tensorboard logs
     sample_inputs = torch.randn(input_size) 
@@ -116,10 +114,10 @@ def main():
         print(f"Epoch {t+1}\n-------------------------------")
         epoch_loss_train = train_epoch(training_dataloader, model, loss_fn, optimizer, device, writer, epoch=t)
         epoch_loss_test = test_epoch(testing_dataloader, model, loss_fn, device, writer)
-        # TODO: replace with midi prediction
-        # epoch_audio_prediction, epoch_audio_target  = generate_audio_examples(model, device, testing_dataloader)
         writer.add_scalar("Epoch_Loss/train", epoch_loss_train, t)
         writer.add_scalar("Epoch_Loss/test", epoch_loss_test, t)
+        # TODO: replace with midi prediction
+        # epoch_audio_prediction, epoch_audio_target  = generate_audio_examples(model, device, testing_dataloader)
         # writer.add_audio("Audio/prediction", epoch_audio_prediction, t, sample_rate=44100)
         # writer.add_audio("Audio/target", epoch_audio_target, t, sample_rate=44100)        
         writer.step()  

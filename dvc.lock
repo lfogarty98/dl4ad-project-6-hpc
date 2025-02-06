@@ -10,8 +10,8 @@ stages:
       nfiles: 10
     - path: source/preprocess.py
       hash: md5
-      md5: 67c69e93ed04b45ccb6a04a4e1a51b27
-      size: 4924
+      md5: 6f95b8eb2f9f1c51525f3a5eac2c40ab
+      size: 5336
     params:
       params.yaml:
         preprocess.audio_dir: data/raw/separated_jazz_track_stems
@@ -40,18 +40,31 @@ stages:
       size: 493
     - path: source/train.py
       hash: md5
-      md5: 4387bcbde0d1c3403bcbf50a5f2b3bdc
-      size: 5810
+      md5: c1cf993d7aa1e6d04cdfe728a5709725
+      size: 5749
     params:
       params.yaml:
         model.hidden_size: 20
         model.num_lstm_layers: 2
-        train.batch_size: 16
-        train.epochs: 3
+        train.batch_size: 32
+        train.epochs: 20
         train.learning_rate: 0.01
     outs:
     - path: models/checkpoints/
       hash: md5
-      md5: 46a74b2a1de5c0aab82fee2f1a85725b.dir
+      md5: 09a2901cd978118e81387eaeeb83f3c6.dir
       size: 198364
+      nfiles: 1
+  save_logs:
+    cmd: python source/utils/logs.py
+    deps:
+    - path: source/utils/logs.py
+      hash: md5
+      md5: c02425092772f434f06560a38e1960fd
+      size: 9135
+    outs:
+    - path: exp_logs/
+      hash: md5
+      md5: e53e2c0fdb0f1ecb94b6731b7e68fc05.dir
+      size: 1157934
       nfiles: 1
