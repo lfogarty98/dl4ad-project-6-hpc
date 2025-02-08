@@ -109,8 +109,13 @@ def main():
     audio_files = [os.path.join(audio_dir, filename) for filename in os.listdir(audio_dir)]
     midi_files = [os.path.join(midi_dir, filename) for filename in os.listdir(midi_dir)]
 
+    # Do preprocessing
     X, Y = prepare_data(audio_files, midi_files, spectrogram_transform)
     print("Data loaded and normalized.")
+    
+    # Print shapes of inputs and labels
+    print(f"Inputs shape: {X.shape}")
+    print(f"Labels shape: {Y.shape}")
 
     # Simple split of data into training and testing sets
     X_training, X_testing = split_data(X, test_split)

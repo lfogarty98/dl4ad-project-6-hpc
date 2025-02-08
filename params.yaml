@@ -2,8 +2,8 @@ general:
   random_seed: 42
 
 preprocess:
-  audio_dir: 'data/raw/separated_jazz_track_stems'  # Directory containing the audio files
-  midi_dir: 'data/raw/midi_solos'  # Directory containing the MIDI files
+  audio_dir: 'data/raw/Small_Training_Set_DL4AD/accompaniments'  # Directory containing the audio files
+  midi_dir: 'data/raw/Small_Training_Set_DL4AD/midi_solos'  # Directory containing the MIDI files
   buffer_size: 128
 
   ## Parameters for the spectrogram ##
