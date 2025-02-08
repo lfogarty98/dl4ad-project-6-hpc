@@ -33,8 +33,11 @@ def midi_to_piano_roll(midi_file, fs):
     Takes a MIDI file and returns the corresponding piano roll matrix.
     Matrix entries correspond to the velocity of the note played at that time.
     """
-    midi_data = pretty_midi.PrettyMIDI(midi_file)
-    piano_roll = midi_data.get_piano_roll(fs=fs)
+    try:
+        midi_data = pretty_midi.PrettyMIDI(midi_file)
+        piano_roll = midi_data.get_piano_roll(fs=fs)
+    except EOFError:
+        print(f'Corrupt or empty MIDI file detected: {midi_file}')
     return piano_roll
 
 def prepare_data(audio_files, midi_files, spectrogram_transform):
@@ -55,7 +58,11 @@ def prepare_data(audio_files, midi_files, spectrogram_transform):
         fs = num_frames / T # each column is spaced apart by 1./fs seconds.
         
         # Compute piano roll
-        piano_roll = midi_to_piano_roll(midi_file, fs=fs)
+        try:
+            piano_roll = midi_to_piano_roll(midi_file, fs=fs)
+        except (EOFError, OSError, ValueError) as e:
+            print(f'Warning: Skipping corrupt MIDI file {midi_file}. Using placeholder.')
+            piano_roll = np.zeros((128, num_frames))  # 128 MIDI notes, num_frames from spectrogram
         
         # Trim or pad piano roll to match the number of frames in the spectrogram, assuming mismatch is due to rounding errors
         if piano_roll.shape[-1] > num_frames:
