@@ -5,19 +5,19 @@ stages:
     deps:
     - path: data/raw/
       hash: md5
-      md5: 11e98e28e501d585f6c8a0c05503a1b4.dir
-      size: 16770049
-      nfiles: 10
+      md5: 47561e9b7e7b26531a5913084256c1c1.dir
+      size: 1180272297
+      nfiles: 601
     - path: source/preprocess.py
       hash: md5
-      md5: 6f95b8eb2f9f1c51525f3a5eac2c40ab
-      size: 5336
+      md5: 041bd9518a95f4d3cdf0d117486f5154
+      size: 5427
     params:
       params.yaml:
-        preprocess.audio_dir: data/raw/separated_jazz_track_stems
+        preprocess.audio_dir: data/raw/single_track/separated_jazz_track_stems
         preprocess.buffer_size: 128
         preprocess.hop_length: 1024
-        preprocess.midi_dir: data/raw/midi_solos
+        preprocess.midi_dir: data/raw/single_track/midi_solos
         preprocess.n_fft: 1024
         preprocess.win_length: 1024
     outs:

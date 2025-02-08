@@ -57,10 +57,10 @@ def prepare_data(audio_files, midi_files, spectrogram_transform):
         # Compute piano roll
         try:
             piano_roll = midi_to_piano_roll(midi_file, fs=fs)
-        except (EOFError, OSError, ValueError) as e:
+        except Exception as e:
             print(f'Warning: Skipping corrupt MIDI file {midi_file}. Using placeholder.')
             piano_roll = np.zeros((128, num_frames))  # 128 MIDI notes, num_frames from spectrogram
-        
+
         # Trim or pad piano roll to match the number of frames in the spectrogram, assuming mismatch is due to rounding errors
         if piano_roll.shape[-1] > num_frames:
             piano_roll = piano_roll[:, :num_frames]  # Trim excess columns in piano roll
@@ -69,7 +69,7 @@ def prepare_data(audio_files, midi_files, spectrogram_transform):
             piano_roll = np.pad(piano_roll, ((0, 0), (0, padding)), mode='constant')  # Pad piano roll with zeros
             
         # Normalization of piano roll values to [0, 1]
-        piano_roll_normalized = piano_roll / np.max(piano_roll) # since min of piano roll is 0, we can just divide by max to normalize
+        piano_roll_normalized = piano_roll / ( np.max(piano_roll) + 1e-16) # since min of piano roll is 0, we can just divide by max to normalize
         
         X.append(specgram)
         Y.append(piano_roll_normalized)
@@ -107,10 +107,11 @@ def main():
     # Load raw data
     audio_files = [os.path.join(audio_dir, filename) for filename in os.listdir(audio_dir)]
     midi_files = [os.path.join(midi_dir, filename) for filename in os.listdir(midi_dir)]
+    print("Raw data loaded.")
 
     # Do preprocessing
     X, Y = prepare_data(audio_files, midi_files, spectrogram_transform)
-    print("Data loaded and normalized.")
+    print("Data preparation done.")
     
     # Print shapes of inputs and labels
     print(f"Inputs shape: {X.shape}")
