@@ -25,8 +25,6 @@ def audio_to_spectrogram(audio_file, spectrogram_transform):
     # Check if the audio is stereo (multi-channel) and convert to mono
     if waveform.shape[0] > 1:
         waveform = waveform.mean(dim=0, keepdim=True)
-    print(f'Audio filepath: {audio_file})')
-    print(f'Duration of waveform: {waveform.shape[1] / sample_rate} seconds')
     specgram = spectrogram_transform(waveform)
     return specgram, sample_rate
 
@@ -36,9 +34,6 @@ def midi_to_piano_roll(midi_file, fs):
     Matrix entries correspond to the velocity of the note played at that time.
     """
     midi_data = pretty_midi.PrettyMIDI(midi_file)
-    print(f'MIDI filepath: {midi_file})')
-    print(f"Duration of MIDI file: {midi_data.get_end_time()} seconds ")
-    print(f'Number of ticks: {midi_data.time_to_tick(midi_data.get_end_time())}')
     piano_roll = midi_data.get_piano_roll(fs=fs)
     return piano_roll
 
