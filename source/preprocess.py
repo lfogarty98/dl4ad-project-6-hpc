@@ -33,11 +33,8 @@ def midi_to_piano_roll(midi_file, fs):
     Takes a MIDI file and returns the corresponding piano roll matrix.
     Matrix entries correspond to the velocity of the note played at that time.
     """
-    try:
-        midi_data = pretty_midi.PrettyMIDI(midi_file)
-        piano_roll = midi_data.get_piano_roll(fs=fs)
-    except EOFError:
-        print(f'Corrupt or empty MIDI file detected: {midi_file}')
+    midi_data = pretty_midi.PrettyMIDI(midi_file)
+    piano_roll = midi_data.get_piano_roll(fs=fs)
     return piano_roll
 
 def prepare_data(audio_files, midi_files, spectrogram_transform):
