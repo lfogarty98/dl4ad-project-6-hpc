@@ -5,25 +5,25 @@ stages:
     deps:
     - path: data/raw/
       hash: md5
-      md5: 11e98e28e501d585f6c8a0c05503a1b4.dir
-      size: 16770049
-      nfiles: 10
+      md5: 47561e9b7e7b26531a5913084256c1c1.dir
+      size: 1180249672
+      nfiles: 601
     - path: source/preprocess.py
       hash: md5
-      md5: 6f95b8eb2f9f1c51525f3a5eac2c40ab
-      size: 5336
+      md5: 041bd9518a95f4d3cdf0d117486f5154
+      size: 5427
     params:
       params.yaml:
-        preprocess.audio_dir: data/raw/separated_jazz_track_stems
+        preprocess.audio_dir: data/raw/single_track/separated_jazz_track_stems
         preprocess.buffer_size: 128
         preprocess.hop_length: 1024
-        preprocess.midi_dir: data/raw/midi_solos
+        preprocess.midi_dir: data/raw/single_track/midi_solos
         preprocess.n_fft: 1024
         preprocess.win_length: 1024
     outs:
     - path: data/processed/
       hash: md5
-      md5: 9a3ce2e4a0b4fe2b60a20bb73673509a.dir
+      md5: 2389881924a7133bfd9fbc684dd01c87.dir
       size: 106669062
       nfiles: 1
   train:
@@ -31,7 +31,7 @@ stages:
     deps:
     - path: data/processed/
       hash: md5
-      md5: 9a3ce2e4a0b4fe2b60a20bb73673509a.dir
+      md5: 2389881924a7133bfd9fbc684dd01c87.dir
       size: 106669062
       nfiles: 1
     - path: source/model.py
@@ -40,20 +40,20 @@ stages:
       size: 493
     - path: source/train.py
       hash: md5
-      md5: c1cf993d7aa1e6d04cdfe728a5709725
-      size: 5749
+      md5: fc544a239f85b74fa4552d951d9ac5a5
+      size: 5754
     params:
       params.yaml:
         model.hidden_size: 20
         model.num_lstm_layers: 2
-        train.batch_size: 32
-        train.epochs: 20
+        train.batch_size: 64
+        train.epochs: 100
         train.learning_rate: 0.01
     outs:
     - path: models/checkpoints/
       hash: md5
-      md5: 09a2901cd978118e81387eaeeb83f3c6.dir
-      size: 198364
+      md5: ca28aeef99a8d669650c97374cb1217c.dir
+      size: 197574
       nfiles: 1
   save_logs:
     cmd: python source/utils/logs.py
@@ -65,6 +65,6 @@ stages:
     outs:
     - path: exp_logs/
       hash: md5
-      md5: e53e2c0fdb0f1ecb94b6731b7e68fc05.dir
-      size: 1157934
-      nfiles: 1
+      md5: 05dfc29e36b591dc5ba1f08338c5e84e.dir
+      size: 2969367
+      nfiles: 2
