@@ -31,3 +31,6 @@ NOTES.md
 # Ignore local environment vars
 local.env
 /exp_logs
+
+# # Ignore hpc image folder
+# /dl4ad-project-6-hpc-image_latest
