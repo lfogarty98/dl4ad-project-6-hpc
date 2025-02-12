@@ -40,20 +40,22 @@ stages:
       size: 493
     - path: source/train.py
       hash: md5
-      md5: c1cf993d7aa1e6d04cdfe728a5709725
-      size: 5749
+      md5: f7fffabc7fc6833805598cffe38c5f26
+      size: 8357
     params:
       params.yaml:
-        model.hidden_size: 20
+        model.hidden_size: 50
         model.num_lstm_layers: 2
-        train.batch_size: 1
-        train.epochs: 20
-        train.learning_rate: 0.01
+        train.batch_size: 4096
+        train.device_request: cuda
+        train.epochs: 500
+        train.learning_rate: 0.0001
+        train.num_eval_batches: 10
     outs:
     - path: models/checkpoints/
       hash: md5
-      md5: 7da153c407f2da8e32e5f6791439dbcc.dir
-      size: 197574
+      md5: bee4c94a3d6d23f6ea05e847537f193f.dir
+      size: 561990
       nfiles: 1
   save_logs:
     cmd: python source/utils/logs.py
