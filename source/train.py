@@ -64,11 +64,13 @@ def generate_predictions(model, device, dataloader, num_eval_batches):
             y = y.to(device)
             predicted_batch = model(X)
             
-            prediction = torch.cat((prediction, predicted_batch.flatten()), 0)
-            target = torch.cat((target, y.flatten()), 0)
+            prediction = torch.cat((prediction, predicted_batch), 0)
+            target = torch.cat((target, y), 0)
     # Convert prediction and target from normalized proll to plots
-    piano_roll_prediction_plot = plot_binarized_piano_roll(prediction.cpu().numpy(), "Predicted Piano Roll")
-    piano_roll_target_plot = plot_binarized_piano_roll(target.cpu().numpy(), "Target Piano Roll")
+    prediction = prediction.cpu().numpy().squeeze() 
+    target = target.cpu().numpy().squeeze()
+    piano_roll_prediction_plot = plot_binarized_piano_roll(prediction, "Predicted Piano Roll")
+    piano_roll_target_plot = plot_binarized_piano_roll(target, "Target Piano Roll")
     return piano_roll_prediction_plot, piano_roll_target_plot
 
 def plot_binarized_piano_roll(piano_roll, plot_title):
