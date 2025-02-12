@@ -4,6 +4,8 @@ import torchinfo
 from utils import logs, config
 from pathlib import Path
 from model import NeuralNetwork
+import pypianoroll as ppr
+import matplotlib.pyplot as plt
 
 def train_epoch(dataloader, model, loss_fn, optimizer, device, writer, epoch):
     size = len(dataloader.dataset)
@@ -13,7 +15,7 @@ def train_epoch(dataloader, model, loss_fn, optimizer, device, writer, epoch):
     for batch, (X, y) in enumerate(dataloader):
         X, y = X.to(device), y.to(device)
         pred = model(X)
-        loss = 10 * loss_fn(pred, y)
+        loss = 10 * loss_fn(pred, y) # Multiply by 10 to scale the loss
         loss.backward()
         optimizer.step()
         optimizer.zero_grad()
@@ -39,9 +41,44 @@ def test_epoch(dataloader, model, loss_fn, device, writer):
     print(f"Test Error: \n Avg loss: {test_loss:>8f} \n")
     return test_loss
 
-# def predictions_to_midi():
-#     # TODO: Implement this function
-#     pass
+def predictions_to_midi(predictions):
+    pass
+
+def generate_predictions(model, device, dataloader, num_eval_batches):
+    """
+    Generate predictions (concantenated normalized piano roll matrices) using the model and the testing dataloader.
+    Since the training data is effectively one long stream of audio and midi, num_eval_batches specifies the number
+    of batches to evaluate, which should be limited for performance reasons.
+    
+    Returns the predicted piano roll and the target piano roll as matplotlib figures for visualisation.
+    """
+    prediction = torch.zeros(0).to(device)
+    target = torch.zeros(0).to(device)
+    model.eval()  # Ensure model is in evaluation mode
+    with torch.no_grad():
+        for i, (X, y) in enumerate(dataloader):
+            if i >= num_eval_batches: # Limit the number of batches to evaluate
+                break
+            
+            X = X.to(device)
+            y = y.to(device)
+            predicted_batch = model(X)
+            
+            prediction = torch.cat((prediction, predicted_batch.flatten()), 0)
+            target = torch.cat((target, y.flatten()), 0)
+    # Convert prediction and target from normalized proll to plots
+    piano_roll_prediction_plot = plot_binarized_piano_roll(prediction.cpu().numpy(), "Predicted Piano Roll")
+    piano_roll_target_plot = plot_binarized_piano_roll(target.cpu().numpy(), "Target Piano Roll")
+    return piano_roll_prediction_plot, piano_roll_target_plot
+
+def plot_binarized_piano_roll(piano_roll, plot_title):
+    piano_roll_scaled = (piano_roll * 127).astype(int) # Scale back to [0, 127]
+    ppr_object = ppr.Multitrack(tracks=[ppr.StandardTrack(pianoroll=piano_roll_scaled.T)]) # Transpose to match pypianoroll format
+    ppr_object.binarize()
+    fig, ax = plt.subplots(figsize=(12, 6))
+    ppr.plot_pianoroll(ax, ppr_object.tracks[0].pianoroll, cmap="Blues")
+    ax.set_title(plot_title)
+    return fig
 
 def reshape_and_batch(X, Y):
     # Add batch dimension to Y
@@ -61,6 +98,7 @@ def main():
     batch_size = params['train']['batch_size']
     learning_rate = params['train']['learning_rate']
     device_request = params['train']['device_request']
+    num_eval_batches = params['train']['num_eval_batches']
     hidden_size = params['model']['hidden_size']
     num_lstm_layers = params['model']['num_lstm_layers']
 
@@ -71,6 +109,7 @@ def main():
 
     # Set a random seed for reproducibility across all devices. Add more devices if needed
     config.set_random_seeds(random_seed)
+    
     # Prepare the requested device for training. Use cpu if the requested device is not available 
     device = config.prepare_device(device_request)
 
@@ -116,8 +155,11 @@ def main():
         epoch_loss_test = test_epoch(testing_dataloader, model, loss_fn, device, writer)
         writer.add_scalar("Epoch_Loss/train", epoch_loss_train, t)
         writer.add_scalar("Epoch_Loss/test", epoch_loss_test, t)
-        # TODO: replace with midi prediction
-        # epoch_audio_prediction, epoch_audio_target  = generate_audio_examples(model, device, testing_dataloader)
+        # TODO: add audio examples
+        piano_roll_prediction_plot, piano_roll_target_plot = generate_predictions(model, device, testing_dataloader, num_eval_batches)
+        writer.add_figure("Piano_Roll/prediction", piano_roll_prediction_plot, t)
+        writer.add_figure("Piano_Roll/target", piano_roll_target_plot, t)
+        # epoch_audio_prediction, epoch_audio_target  = generate_audio_examples(model, device, testing_dataloader, num_eval_batches)
         # writer.add_audio("Audio/prediction", epoch_audio_prediction, t, sample_rate=44100)
         # writer.add_audio("Audio/target", epoch_audio_target, t, sample_rate=44100)        
         writer.step()  

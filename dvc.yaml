@@ -25,6 +25,8 @@ stages:
     - train.epochs
     - train.batch_size
     - train.learning_rate
+    - train.device_request
+    - train.num_eval_batches
     outs:
     - models/checkpoints/
 #   export:
