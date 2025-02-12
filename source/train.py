@@ -51,6 +51,8 @@ def generate_predictions(model, device, dataloader, num_eval_batches):
     of batches to evaluate, which should be limited for performance reasons.
     
     Returns the predicted piano roll and the target piano roll as matplotlib figures for visualisation.
+    
+    TODO: Add audio examples
     """
     prediction = torch.zeros(0).to(device)
     target = torch.zeros(0).to(device)
@@ -64,16 +66,22 @@ def generate_predictions(model, device, dataloader, num_eval_batches):
             y = y.to(device)
             predicted_batch = model(X)
             
-            prediction = torch.cat((prediction, predicted_batch.flatten()), 0)
-            target = torch.cat((target, y.flatten()), 0)
+            prediction = torch.cat((prediction, predicted_batch), 0)
+            target = torch.cat((target, y), 0)
     # Convert prediction and target from normalized proll to plots
-    piano_roll_prediction_plot = plot_binarized_piano_roll(prediction.cpu().numpy(), "Predicted Piano Roll")
-    piano_roll_target_plot = plot_binarized_piano_roll(target.cpu().numpy(), "Target Piano Roll")
+    prediction = prediction.cpu().numpy().squeeze() 
+    target = target.cpu().numpy().squeeze()
+    piano_roll_prediction_plot = plot_binarized_piano_roll(prediction, "Predicted Piano Roll")
+    piano_roll_target_plot = plot_binarized_piano_roll(target, "Target Piano Roll")
     return piano_roll_prediction_plot, piano_roll_target_plot
 
 def plot_binarized_piano_roll(piano_roll, plot_title):
+    """
+    Plot a binarized piano roll using pypianoroll, and return the figure object for the Tensorboard logs.
+    For visualisation purposes, the piano roll is scaled back to [0, 127] and binarized.
+    """
     piano_roll_scaled = (piano_roll * 127).astype(int) # Scale back to [0, 127]
-    ppr_object = ppr.Multitrack(tracks=[ppr.StandardTrack(pianoroll=piano_roll_scaled.T)]) # Transpose to match pypianoroll format
+    ppr_object = ppr.Multitrack(tracks=[ppr.StandardTrack(pianoroll=piano_roll_scaled)]) # NOTE: may need to transpose to match pypianoroll format
     ppr_object.binarize()
     fig, ax = plt.subplots(figsize=(12, 6))
     ppr.plot_pianoroll(ax, ppr_object.tracks[0].pianoroll, cmap="Blues")
