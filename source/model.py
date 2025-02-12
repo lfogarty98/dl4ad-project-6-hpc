@@ -10,4 +10,5 @@ class NeuralNetwork(nn.Module):
     def forward(self, x):
         x, (hidden, cell) = self.lstm(x)
         x = self.linear(x)
+        x = torch.sigmoid(x) * 127  # Ensures output in [0, 127]
         return x

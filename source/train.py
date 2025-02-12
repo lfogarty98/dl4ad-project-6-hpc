@@ -13,7 +13,7 @@ def train_epoch(dataloader, model, loss_fn, optimizer, device, writer, epoch):
     for batch, (X, y) in enumerate(dataloader):
         X, y = X.to(device), y.to(device)
         pred = model(X)
-        loss = 10 * loss_fn(pred, y)
+        loss = 1 * loss_fn(pred, y)
         loss.backward()
         optimizer.step()
         optimizer.zero_grad()
