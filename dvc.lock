@@ -6,7 +6,7 @@ stages:
     - path: data/raw/
       hash: md5
       md5: 47561e9b7e7b26531a5913084256c1c1.dir
-      size: 1180272297
+      size: 1180249672
       nfiles: 601
     - path: source/preprocess.py
       hash: md5
@@ -14,46 +14,48 @@ stages:
       size: 5427
     params:
       params.yaml:
-        preprocess.audio_dir: data/raw/single_track/separated_jazz_track_stems
+        preprocess.audio_dir: data/raw/Small_Training_Set_DL4AD/accompaniments
         preprocess.buffer_size: 128
         preprocess.hop_length: 1024
-        preprocess.midi_dir: data/raw/single_track/midi_solos
+        preprocess.midi_dir: data/raw/Small_Training_Set_DL4AD/midi_solos
         preprocess.n_fft: 1024
         preprocess.win_length: 1024
     outs:
     - path: data/processed/
       hash: md5
-      md5: 2389881924a7133bfd9fbc684dd01c87.dir
-      size: 106669062
+      md5: 43435b8aa4e4df427c30726c47374b61.dir
+      size: 7467038854
       nfiles: 1
   train:
     cmd: python source/train.py
     deps:
     - path: data/processed/
       hash: md5
-      md5: 2389881924a7133bfd9fbc684dd01c87.dir
-      size: 106669062
+      md5: 43435b8aa4e4df427c30726c47374b61.dir
+      size: 7467038854
       nfiles: 1
     - path: source/model.py
       hash: md5
-      md5: bcfde965bc78e5e9e0180cf5a05be24d
-      size: 493
+      md5: 60fa1c26f15be2ea95a222440c6d2459
+      size: 648
     - path: source/train.py
       hash: md5
-      md5: c1cf993d7aa1e6d04cdfe728a5709725
-      size: 5749
+      md5: 933faa5a0b86c8211c60c8f73e35ffd1
+      size: 8372
     params:
       params.yaml:
-        model.hidden_size: 20
+        model.hidden_size: 50
         model.num_lstm_layers: 2
-        train.batch_size: 1
-        train.epochs: 20
-        train.learning_rate: 0.01
+        train.batch_size: 4096
+        train.device_request: cuda
+        train.epochs: 100
+        train.learning_rate: 0.0001
+        train.num_eval_batches: 10
     outs:
     - path: models/checkpoints/
       hash: md5
-      md5: 7da153c407f2da8e32e5f6791439dbcc.dir
-      size: 197574
+      md5: 7fa5ee2061e914fc772ef7134bebcd11.dir
+      size: 561990
       nfiles: 1
   save_logs:
     cmd: python source/utils/logs.py

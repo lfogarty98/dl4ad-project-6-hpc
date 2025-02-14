@@ -82,7 +82,7 @@ def plot_binarized_piano_roll(piano_roll, plot_title):
     """
     piano_roll_scaled = (piano_roll * 127).astype(int) # Scale back to [0, 127]
     ppr_object = ppr.Multitrack(tracks=[ppr.StandardTrack(pianoroll=piano_roll_scaled)]) # NOTE: may need to transpose to match pypianoroll format
-    ppr_object.binarize()
+    # ppr_object.binarize(threshold=0.5)
     fig, ax = plt.subplots(figsize=(12, 6))
     ppr.plot_pianoroll(ax, ppr_object.tracks[0].pianoroll, cmap="Blues")
     ax.set_title(plot_title)
