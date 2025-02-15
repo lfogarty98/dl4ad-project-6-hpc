@@ -7,7 +7,25 @@ from model import NeuralNetwork
 import pypianoroll as ppr
 import matplotlib.pyplot as plt
 
-def train_epoch(dataloader, model, loss_fn, optimizer, device, writer, epoch):
+def regularizer(prediction, threshold=10):
+    """
+    Regularizer which penalizes frames that have too many active notes by returning a 
+    penalty that increases as more notes exceed the given threshold.
+    """
+    penalty = 0.0  # Initialize penalty
+    for frame in prediction:  # Iterate over each frame (Shape: (num_frames, 1, 128))
+        active_notes = torch.sum(frame > 0).item()  # Count nonzero (active) notes in frame
+        if active_notes > threshold:  
+            penalty += (active_notes - threshold) ** 2  # Quadratic penalty for exceeding threshold
+    
+    return penalty     
+
+def train_epoch(dataloader, model, loss_fn, optimizer, device, writer, epoch, lambda_reg=0.0):
+    """
+    Train the model for one epoch using the training dataloader.
+    Loss is computed as the sum of the base loss and the regularization penalty.
+    Regularization is applied only if lambda_reg > 0.
+    """
     size = len(dataloader.dataset)
     num_batches = len(dataloader)
     train_loss = 0 
@@ -15,11 +33,21 @@ def train_epoch(dataloader, model, loss_fn, optimizer, device, writer, epoch):
     for batch, (X, y) in enumerate(dataloader):
         X, y = X.to(device), y.to(device)
         pred = model(X)
-        loss = 10 * loss_fn(pred, y) # Multiply by 10 to scale the loss
+        
+        # Compute base loss (scaled by 10)
+        base_loss = 10 * loss_fn(pred, y)
+
+        # Compute regularization penalty
+        reg_loss = lambda_reg * regularizer(pred, threshold=5)
+
+        # Total loss (base loss + regularization)
+        loss = base_loss + reg_loss  
+        
         loss.backward()
         optimizer.step()
         optimizer.zero_grad()
         writer.add_scalar("Batch_Loss/train", loss.item(), batch + epoch * len(dataloader))
+        writer.add_scalar("Batch_Regularization_Loss/train", reg_loss, batch + epoch * len(dataloader))  # Log reg loss separately
         train_loss += loss.item()
         if batch % 100 == 0:
             loss_value = loss.item()
@@ -71,18 +99,19 @@ def generate_predictions(model, device, dataloader, num_eval_batches):
     # Convert prediction and target from normalized proll to plots
     prediction = prediction.cpu().numpy().squeeze() 
     target = target.cpu().numpy().squeeze()
-    piano_roll_prediction_plot = plot_binarized_piano_roll(prediction, "Predicted Piano Roll")
-    piano_roll_target_plot = plot_binarized_piano_roll(target, "Target Piano Roll")
+    piano_roll_prediction_plot = plot_piano_roll(prediction, "Predicted Piano Roll")
+    piano_roll_target_plot = plot_piano_roll(target, "Target Piano Roll")
     return piano_roll_prediction_plot, piano_roll_target_plot
 
-def plot_binarized_piano_roll(piano_roll, plot_title):
+def plot_piano_roll(piano_roll, plot_title, binarize=False):
     """
-    Plot a binarized piano roll using pypianoroll, and return the figure object for the Tensorboard logs.
+    Plot a (optionally binarized) piano roll using pypianoroll, and return the figure object for the Tensorboard logs.
     For visualisation purposes, the piano roll is scaled back to [0, 127] and binarized.
     """
     piano_roll_scaled = (piano_roll * 127).astype(int) # Scale back to [0, 127]
     ppr_object = ppr.Multitrack(tracks=[ppr.StandardTrack(pianoroll=piano_roll_scaled)]) # NOTE: may need to transpose to match pypianoroll format
-    ppr_object.binarize()
+    if binarize:
+        ppr_object.binarize() # Binarize the piano roll
     fig, ax = plt.subplots(figsize=(12, 6))
     ppr.plot_pianoroll(ax, ppr_object.tracks[0].pianoroll, cmap="Blues")
     ax.set_title(plot_title)
