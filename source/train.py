@@ -188,8 +188,14 @@ def main():
     writer.add_graph(model, sample_inputs.to(device))
 
     # Define the loss function and the optimizer
-    # loss_fn = torch.nn.MSELoss(reduction='mean')
-    loss_fn = torch.nn.BCELoss(reduction='mean')  # Binary cross entropy loss
+    num_positives = Y_training.squeeze(1).sum(dim=0)
+    num_negatives = Y_training[0] - num_positives
+    pos_weight = num_negatives / (num_positives + 1e-6)
+    pos_weight = pos_weight.to(device)
+    print(f'Positive samples: {num_positives}')
+    print(f'Negative samples: {num_negatives}')
+    print(f'pos_weight: {pos_weight}')
+    loss_fn = torch.nn.BCEWithLogitsLoss(reduction='mean', pos_weight=pos_weight)  # Binary cross entropy loss
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 
     # Create the dataloaders
