@@ -69,12 +69,13 @@ def prepare_data(audio_files, midi_files, spectrogram_transform):
             piano_roll = np.pad(piano_roll, ((0, 0), (0, padding)), mode='constant')  # Pad piano roll with zeros
             
         # Normalization of piano roll values to [0, 1]
-        piano_roll_normalized = piano_roll / ( np.max(piano_roll) + 1e-16) # since min of piano roll is 0, we can just divide by max to normalize
+        # piano_roll_normalized = piano_roll / ( np.max(piano_roll) + 1e-16) # since min of piano roll is 0, we can just divide by max to normalize
         
-        # TODO: remove velocity info
+        # remove velocity info
+        piano_roll_binarized = np.where(piano_roll > 0, 1, 0)
         
         X.append(specgram)
-        Y.append(piano_roll_normalized)
+        Y.append(piano_roll_binarized)
 
     # Concatenate all spectrograms and piano rolls
     X_flat = torch.cat(X, dim=-1)
