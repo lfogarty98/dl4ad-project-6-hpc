@@ -6,12 +6,12 @@ stages:
     - path: data/raw/
       hash: md5
       md5: 47561e9b7e7b26531a5913084256c1c1.dir
-      size: 1180272297
+      size: 1180249672
       nfiles: 601
     - path: source/preprocess.py
       hash: md5
-      md5: 041bd9518a95f4d3cdf0d117486f5154
-      size: 5427
+      md5: 038e6f0730767e1fe7135158c95c4beb
+      size: 5530
     params:
       params.yaml:
         preprocess.audio_dir: data/raw/single_track/separated_jazz_track_stems
@@ -23,7 +23,7 @@ stages:
     outs:
     - path: data/processed/
       hash: md5
-      md5: 2389881924a7133bfd9fbc684dd01c87.dir
+      md5: 3f36ca6ab722b861099e5e6c31c7019d.dir
       size: 106669062
       nfiles: 1
   train:
@@ -31,29 +31,31 @@ stages:
     deps:
     - path: data/processed/
       hash: md5
-      md5: 2389881924a7133bfd9fbc684dd01c87.dir
+      md5: 3f36ca6ab722b861099e5e6c31c7019d.dir
       size: 106669062
       nfiles: 1
     - path: source/model.py
       hash: md5
-      md5: bcfde965bc78e5e9e0180cf5a05be24d
-      size: 493
+      md5: c808eda9cdc017ad25670224002f97fa
+      size: 1069
     - path: source/train.py
       hash: md5
-      md5: c1cf993d7aa1e6d04cdfe728a5709725
-      size: 5749
+      md5: ca34415d3327453ffa3ad329f5b739b1
+      size: 10034
     params:
       params.yaml:
-        model.hidden_size: 20
+        model.hidden_size: 50
         model.num_lstm_layers: 2
-        train.batch_size: 1
-        train.epochs: 20
-        train.learning_rate: 0.01
+        train.batch_size: 4096
+        train.device_request: cuda
+        train.epochs: 100
+        train.learning_rate: 0.0001
+        train.num_eval_batches: 10
     outs:
     - path: models/checkpoints/
       hash: md5
-      md5: 7da153c407f2da8e32e5f6791439dbcc.dir
-      size: 197574
+      md5: 315e24f6fbc35061d0df3e61d42801e2.dir
+      size: 562054
       nfiles: 1
   save_logs:
     cmd: python source/utils/logs.py
