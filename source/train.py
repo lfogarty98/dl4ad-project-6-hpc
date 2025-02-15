@@ -188,7 +188,8 @@ def main():
     writer.add_graph(model, sample_inputs.to(device))
 
     # Define the loss function and the optimizer
-    loss_fn = torch.nn.MSELoss(reduction='mean')
+    # loss_fn = torch.nn.MSELoss(reduction='mean')
+    loss_fn = torch.nn.BCELoss(reduction='mean')
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 
     # Create the dataloaders
