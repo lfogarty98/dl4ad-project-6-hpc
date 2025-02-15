@@ -71,6 +71,8 @@ def prepare_data(audio_files, midi_files, spectrogram_transform):
         # Normalization of piano roll values to [0, 1]
         piano_roll_normalized = piano_roll / ( np.max(piano_roll) + 1e-16) # since min of piano roll is 0, we can just divide by max to normalize
         
+        # TODO: remove velocity info
+        
         X.append(specgram)
         Y.append(piano_roll_normalized)
 
