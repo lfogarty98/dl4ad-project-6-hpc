@@ -93,8 +93,8 @@ def generate_predictions(model, device, dataloader, num_eval_batches):
             X = X.to(device)
             y = y.to(device)
             predicted_batch = model(X)
-            
-            prediction = torch.cat((prediction, predicted_batch), 0)
+            predicted_batch_binary = (predicted_batch > 0.5).float()  # Binarize the prediction
+            prediction = torch.cat((prediction, predicted_batch_binary), 0)
             target = torch.cat((target, y), 0)
     # Create plots
     piano_roll_prediction_plot = plot_piano_roll(prediction, "Predicted Piano Roll")
@@ -188,7 +188,8 @@ def main():
     writer.add_graph(model, sample_inputs.to(device))
 
     # Define the loss function and the optimizer
-    loss_fn = torch.nn.MSELoss(reduction='mean')
+    # loss_fn = torch.nn.MSELoss(reduction='mean')
+    loss_fn = torch.nn.BCELoss(reduction='mean')  # Binary cross entropy loss
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 
     # Create the dataloaders
