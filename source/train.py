@@ -96,26 +96,34 @@ def generate_predictions(model, device, dataloader, num_eval_batches):
             
             prediction = torch.cat((prediction, predicted_batch), 0)
             target = torch.cat((target, y), 0)
-    # Convert prediction and target from normalized proll to plots
-    prediction = prediction.cpu().numpy().squeeze() 
-    target = target.cpu().numpy().squeeze()
+    # Create plots
     piano_roll_prediction_plot = plot_piano_roll(prediction, "Predicted Piano Roll")
     piano_roll_target_plot = plot_piano_roll(target, "Target Piano Roll")
     return piano_roll_prediction_plot, piano_roll_target_plot
 
-def plot_piano_roll(piano_roll, plot_title, binarize=False):
-    """
-    Plot a (optionally binarized) piano roll using pypianoroll, and return the figure object for the Tensorboard logs.
-    For visualisation purposes, the piano roll is scaled back to [0, 127] and binarized.
-    """
-    piano_roll_scaled = (piano_roll * 127).astype(int) # Scale back to [0, 127]
-    ppr_object = ppr.Multitrack(tracks=[ppr.StandardTrack(pianoroll=piano_roll_scaled)]) # NOTE: may need to transpose to match pypianoroll format
-    if binarize:
-        ppr_object.binarize() # Binarize the piano roll
-    fig, ax = plt.subplots(figsize=(12, 6))
-    ppr.plot_pianoroll(ax, ppr_object.tracks[0].pianoroll, cmap="Blues")
+def plot_piano_roll(piano_roll, plot_title): 
+    piano_roll = piano_roll.cpu().numpy().squeeze()
+    piano_roll = piano_roll.T
+    fig, ax = plt.subplots()
+    ax.imshow(piano_roll, cmap="gray")
+    ax.set_xlabel("Frame")
+    ax.set_ylabel("MIDI Note")
     ax.set_title(plot_title)
     return fig
+
+# def plot_piano_roll(piano_roll, plot_title, binarize=False):
+#     """
+#     Plot a (optionally binarized) piano roll using pypianoroll, and return the figure object for the Tensorboard logs.
+#     For visualisation purposes, the piano roll is scaled back to [0, 127] and binarized.
+#     """
+#     piano_roll_scaled = (piano_roll * 127).astype(int) # Scale back to [0, 127]
+#     ppr_object = ppr.Multitrack(tracks=[ppr.StandardTrack(pianoroll=piano_roll_scaled)]) # NOTE: may need to transpose to match pypianoroll format
+#     if binarize:
+#         ppr_object.binarize() # Binarize the piano roll
+#     fig, ax = plt.subplots(figsize=(12, 6))
+#     ppr.plot_pianoroll(ax, ppr_object.tracks[0].pianoroll, cmap="Blues")
+#     ax.set_title(plot_title)
+#     return fig
 
 def reshape_and_batch(X, Y):
     # Add batch dimension to Y

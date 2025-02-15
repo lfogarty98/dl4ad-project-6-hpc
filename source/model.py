@@ -6,7 +6,6 @@ class NeuralNetwork(nn.Module):
         super().__init__()
         # self.last_piano_roll = torch.zeros(batch_size, 1, 128)
         # TODO: add intialisation to zeros
-        # TODO: 
         self.lstm = nn.LSTM(input_size=input_dim, hidden_size=hidden_dim, num_layers=num_lstm_layers, batch_first=True, bias=True)
         self.sigmoid_inter = nn.Sigmoid()
         self.linear = nn.Linear(in_features=hidden_dim, out_features=output_dim)
