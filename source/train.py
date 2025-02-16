@@ -137,6 +137,21 @@ def reshape_and_batch(X, Y):
     Y = Y.permute(2, 0, 1)  # Shape: (num_frames, 1, 128)
     return X, Y
 
+def calculate_weight(Y):
+    """
+    Calculate the positive weight for the BCEWithLogitsLoss loss function.
+    The positive weight is the ratio of negative samples to positive samples
+    per MIDI note class across all frames.
+    """
+    Y = Y.squeeze()
+    num_positives = Y.sum(dim=0)
+    num_negatives = Y.shape[0] - num_positives
+    pos_weight = num_negatives / (num_positives + 1e-6)
+    print(f'Positive samples: {num_positives}')
+    print(f'Negative samples: {num_negatives}')
+    print(f'pos_weight: {pos_weight}')
+    return pos_weight
+
 def main():
     # Load the hyperparameters from the params yaml file into a Dictionary
     params = config.Params()
@@ -188,8 +203,8 @@ def main():
     writer.add_graph(model, sample_inputs.to(device))
 
     # Define the loss function and the optimizer
-    # loss_fn = torch.nn.MSELoss(reduction='mean')
-    loss_fn = torch.nn.BCELoss(reduction='mean')  # Binary cross entropy loss
+    pos_weight = calculate_weight(Y_training).to(device)
+    loss_fn = torch.nn.BCEWithLogitsLoss(reduction='mean', pos_weight=pos_weight)  # Binary cross entropy loss
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 
     # Create the dataloaders
