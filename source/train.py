@@ -221,7 +221,7 @@ def main():
         writer.add_scalar("Epoch_Loss/train", epoch_loss_train, t)
         writer.add_scalar("Epoch_Loss/test", epoch_loss_test, t)
         # TODO: add audio examples
-        piano_roll_prediction_plot, piano_roll_target_plot = generate_predictions(model, device, testing_dataloader, num_eval_batches)
+        piano_roll_prediction_plot, piano_roll_target_plot = generate_predictions(model, device, training_dataloader, num_eval_batches)
         writer.add_figure("Piano_Roll/prediction", piano_roll_prediction_plot, t)
         writer.add_figure("Piano_Roll/target", piano_roll_target_plot, t)
         # epoch_audio_prediction, epoch_audio_target  = generate_audio_examples(model, device, testing_dataloader, num_eval_batches)

@@ -79,7 +79,7 @@ def prepare_data(audio_files, midi_files, spectrogram_transform):
 
     # Concatenate all spectrograms and piano rolls
     X_flat = torch.cat(X, dim=-1)
-    Y_flat = torch.cat([torch.tensor(y, dtype=torch.float32) for y in Y], dim=-1)
+    Y_flat = torch.cat([torch.tensor(y, dtype=torch.float32) for y in Y], dim=-1) # TODO: change data type?
     return X_flat, Y_flat
 
 def main():
