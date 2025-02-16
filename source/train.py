@@ -137,7 +137,7 @@ def reshape_and_batch(X, Y):
     Y = Y.permute(2, 0, 1)  # Shape: (num_frames, 1, 128)
     return X, Y
 
-def calculate_weight(Y):
+def calculate_weight(Y, max_weight=1e+5):
     """
     Calculate the positive weight for the BCEWithLogitsLoss loss function.
     The positive weight is the ratio of negative samples to positive samples
@@ -147,10 +147,11 @@ def calculate_weight(Y):
     num_positives = Y.sum(dim=0)
     num_negatives = Y.shape[0] - num_positives
     pos_weight = num_negatives / (num_positives + 1e-6)
+    pos_weight = torch.clamp(pos_weight, 0, max_weight)  # Clamp the weight to a maximum value
     print(f'Positive samples: {num_positives}')
     print(f'Negative samples: {num_negatives}')
     print(f'pos_weight: {pos_weight}')
-    return pos_weight
+    return 1 / (pos_weight + 1e-10)
 
 def main():
     # Load the hyperparameters from the params yaml file into a Dictionary
@@ -221,7 +222,7 @@ def main():
         writer.add_scalar("Epoch_Loss/train", epoch_loss_train, t)
         writer.add_scalar("Epoch_Loss/test", epoch_loss_test, t)
         # TODO: add audio examples
-        piano_roll_prediction_plot, piano_roll_target_plot = generate_predictions(model, device, testing_dataloader, num_eval_batches)
+        piano_roll_prediction_plot, piano_roll_target_plot = generate_predictions(model, device, training_dataloader, num_eval_batches)
         writer.add_figure("Piano_Roll/prediction", piano_roll_prediction_plot, t)
         writer.add_figure("Piano_Roll/target", piano_roll_target_plot, t)
         # epoch_audio_prediction, epoch_audio_target  = generate_audio_examples(model, device, testing_dataloader, num_eval_batches)
