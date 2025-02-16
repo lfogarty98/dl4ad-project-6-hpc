@@ -35,7 +35,7 @@ def train_epoch(dataloader, model, loss_fn, optimizer, device, writer, epoch, la
         pred = model(X)
         
         # Compute base loss (scaled by 10)
-        base_loss = 10 * loss_fn(pred, y)
+        base_loss = loss_fn(pred, y)
 
         # Compute regularization penalty
         reg_loss = lambda_reg * regularizer(pred, threshold=5)
