@@ -72,7 +72,7 @@ def test_epoch(dataloader, model, loss_fn, device, writer):
 def predictions_to_midi(predictions):
     pass
 
-def generate_predictions(model, device, dataloader, num_eval_batches):
+def generate_predictions(model, device, dataloader, num_eval_batches, start_batch=0):
     """
     Generate predictions (concantenated normalized piano roll matrices) using the model and the testing dataloader.
     Since the training data is effectively one long stream of audio and midi, num_eval_batches specifies the number
@@ -87,7 +87,9 @@ def generate_predictions(model, device, dataloader, num_eval_batches):
     model.eval()  # Ensure model is in evaluation mode
     with torch.no_grad():
         for i, (X, y) in enumerate(dataloader):
-            if i >= num_eval_batches: # Limit the number of batches to evaluate
+            if i < start_batch:  # Skip batches before start_batch
+                continue
+            if i >= start_batch + num_eval_batches:  # Stop after processing num_eval_batches
                 break
             
             X = X.to(device)
@@ -224,7 +226,7 @@ def main():
         writer.add_scalar("Epoch_Loss/train", epoch_loss_train, t)
         writer.add_scalar("Epoch_Loss/test", epoch_loss_test, t)
         # TODO: add audio examples
-        piano_roll_prediction_plot, piano_roll_target_plot = generate_predictions(model, device, training_dataloader, num_eval_batches)
+        piano_roll_prediction_plot, piano_roll_target_plot = generate_predictions(model, device, training_dataloader, num_eval_batches, start_batch=0)
         writer.add_figure("Piano_Roll/prediction", piano_roll_prediction_plot, t)
         writer.add_figure("Piano_Roll/target", piano_roll_target_plot, t)
         # epoch_audio_prediction, epoch_audio_target  = generate_audio_examples(model, device, testing_dataloader, num_eval_batches)
