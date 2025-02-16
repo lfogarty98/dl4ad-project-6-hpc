@@ -14,13 +14,13 @@ def regularizer(prediction, threshold=10):
     """
     penalty = 0.0  # Initialize penalty
     for frame in prediction:  # Iterate over each frame (Shape: (num_frames, 1, 128))
-        active_notes = torch.sum(frame > 0).item()  # Count nonzero (active) notes in frame
+        active_notes = torch.sum(frame > 0.5).item()  # Count nonzero (active) notes in frame
         if active_notes > threshold:  
-            penalty += (active_notes - threshold) ** 2  # Quadratic penalty for exceeding threshold
-    
+            penalty += (active_notes - threshold) ** 1 # Add (linear) penalty for exceeding threshold
+    penalty /= prediction.shape[0]  # Average over all frames
     return penalty     
 
-def train_epoch(dataloader, model, loss_fn, optimizer, device, writer, epoch, lambda_reg=0.0):
+def train_epoch(dataloader, model, loss_fn, optimizer, device, writer, epoch, lambda_reg=0.1, max_voices=10):
     """
     Train the model for one epoch using the training dataloader.
     Loss is computed as the sum of the base loss and the regularization penalty.
@@ -35,10 +35,10 @@ def train_epoch(dataloader, model, loss_fn, optimizer, device, writer, epoch, la
         pred = model(X)
         
         # Compute base loss (scaled by 10)
-        base_loss = 10 * loss_fn(pred, y)
+        base_loss = 1 * loss_fn(pred, y)
 
         # Compute regularization penalty
-        reg_loss = lambda_reg * regularizer(pred, threshold=5)
+        reg_loss = lambda_reg * regularizer(torch.sigmoid(pred), threshold=max_voices)
 
         # Total loss (base loss + regularization)
         loss = base_loss + reg_loss  
@@ -164,6 +164,8 @@ def main():
     learning_rate = params['train']['learning_rate']
     device_request = params['train']['device_request']
     num_eval_batches = params['train']['num_eval_batches']
+    lambda_reg = params['train']['lambda_reg']
+    max_voices = params['train']['max_voices']
     hidden_size = params['model']['hidden_size']
     num_lstm_layers = params['model']['num_lstm_layers']
 
@@ -217,7 +219,7 @@ def main():
     # Training loop
     for t in range(epochs):
         print(f"Epoch {t+1}\n-------------------------------")
-        epoch_loss_train = train_epoch(training_dataloader, model, loss_fn, optimizer, device, writer, epoch=t)
+        epoch_loss_train = train_epoch(training_dataloader, model, loss_fn, optimizer, device, writer, epoch=t, lambda_reg=lambda_reg, max_voices=max_voices)
         epoch_loss_test = test_epoch(testing_dataloader, model, loss_fn, device, writer)
         writer.add_scalar("Epoch_Loss/train", epoch_loss_train, t)
         writer.add_scalar("Epoch_Loss/test", epoch_loss_test, t)
