@@ -14,13 +14,13 @@ def regularizer(prediction, threshold=10):
     """
     penalty = 0.0  # Initialize penalty
     for frame in prediction:  # Iterate over each frame (Shape: (num_frames, 1, 128))
-        active_notes = torch.sum(frame > 0).item()  # Count nonzero (active) notes in frame
+        active_notes = torch.sum(frame > 0.5).item()  # Count nonzero (active) notes in frame
         if active_notes > threshold:  
-            penalty += (active_notes - threshold) ** 2  # Quadratic penalty for exceeding threshold
-    
+            penalty += (active_notes - threshold) ** 1
+    penalty /= prediction.shape[0]  # Average over all frames
     return penalty     
 
-def train_epoch(dataloader, model, loss_fn, optimizer, device, writer, epoch, lambda_reg=0.0):
+def train_epoch(dataloader, model, loss_fn, optimizer, device, writer, epoch, lambda_reg=0.1):
     """
     Train the model for one epoch using the training dataloader.
     Loss is computed as the sum of the base loss and the regularization penalty.
@@ -35,10 +35,10 @@ def train_epoch(dataloader, model, loss_fn, optimizer, device, writer, epoch, la
         pred = model(X)
         
         # Compute base loss (scaled by 10)
-        base_loss = 10 * loss_fn(pred, y)
+        base_loss = 1 * loss_fn(pred, y)
 
         # Compute regularization penalty
-        reg_loss = lambda_reg * regularizer(pred, threshold=5)
+        reg_loss = lambda_reg * regularizer(torch.sigmoid(pred), threshold=5)
 
         # Total loss (base loss + regularization)
         loss = base_loss + reg_loss  
