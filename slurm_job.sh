@@ -19,7 +19,7 @@
 #SBATCH --partition=gpu
 
 # Get email notifications for job status
-#SBATCH --mail-type=ALL
+#SBATCH --mail-type=END,FAIL
 #SBATCH --mail-user=lfogarty9995@gmail.com
 
 # Default variable values
