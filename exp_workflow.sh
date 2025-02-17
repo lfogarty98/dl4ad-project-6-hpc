@@ -68,7 +68,7 @@ fi &&
 
 # Run the experiment with passed parameters. Runs with the default parameters if none are passed.
 echo "Running experiment..." &&
-dvc exp run $EXP_PARAMS &&
+dvc exp run --force $EXP_PARAMS &&
 
 # Push the results to the DVC remote repository
 echo "Pushing experiment..." &&
