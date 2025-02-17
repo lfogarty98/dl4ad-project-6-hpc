@@ -32,6 +32,8 @@ def train_epoch(dataloader, model, loss_fn, optimizer, device, writer, epoch, la
     model.train()
     for batch, (X, y) in enumerate(dataloader):
         X, y = X.to(device), y.to(device)
+        
+        
         pred = model(X)
         
         # Compute base loss (scaled by 10)
@@ -133,11 +135,11 @@ def plot_piano_roll(piano_roll, plot_title):
 
 def reshape_and_batch(X, Y):
     # Add batch dimension to Y
-    Y = Y.unsqueeze(0) # Shape: (1, 128, num_frames)
+    Y_flat = Y.unsqueeze(0) # Shape: (1, 128, num_frames)
     # Reshape tensors 
     X = X.permute(2, 0, 1)  # Shape: (num_frames, 1, num_freq_bins)
-    Y = Y.permute(2, 0, 1)  # Shape: (num_frames, 1, 128)
-    return X, Y
+    Y_flat = Y_flat.permute(2, 0, 1)  # Shape: (num_frames, 1, 128)
+    return X, Y_flat
 
 def calculate_weight(Y, max_weight=100.0):
     """
@@ -154,6 +156,28 @@ def calculate_weight(Y, max_weight=100.0):
     print(f'Negative samples: {num_negatives}')
     print(f'pos_weight: {pos_weight}')
     return pos_weight
+
+def collate_fn_pad(batch, batch_size):
+    """
+    Custom collate function to pad batches to the desired batch size.
+    """
+    X_batch, y_batch = zip(*batch)  # Unpack batch tuples
+
+    # Convert to tensors
+    X_batch = torch.stack(X_batch)
+    y_batch = torch.stack(y_batch)
+
+    # If batch is smaller than batch_size, pad it
+    current_size = X_batch.shape[0]
+    if current_size < batch_size:
+        pad_size = batch_size - current_size
+        X_pad = torch.zeros((pad_size, *X_batch.shape[1:]))  # Create padding tensors
+        y_pad = torch.zeros((pad_size, *y_batch.shape[1:]))
+
+        X_batch = torch.cat((X_batch, X_pad), dim=0)
+        y_batch = torch.cat((y_batch, y_pad), dim=0)
+
+    return X_batch, y_batch
 
 def main():
     # Load the hyperparameters from the params yaml file into a Dictionary
@@ -193,20 +217,26 @@ def main():
     # Create the model
     num_freq_bins = X_training.shape[1] # X has shape (1, num_freq_bins, total_num_frames) (assuming mono audio)
     num_midi_classes = 128
-    # TODO: input_dim = num_freq_bins + num_midi_classes
-    model = NeuralNetwork(input_dim=num_freq_bins, hidden_dim=hidden_size, num_lstm_layers=num_lstm_layers, output_dim=num_midi_classes)
+    # add piano roll history thing
+    model = NeuralNetwork(
+        input_dim=num_freq_bins+num_midi_classes,
+        hidden_dim=hidden_size,
+        num_lstm_layers=num_lstm_layers,
+        output_dim=num_midi_classes,
+        batch_size=batch_size
+    )
     
     # Reshape data for the model training
     X_training, Y_training = reshape_and_batch(X_training, Y_training)
     X_testing, Y_testing = reshape_and_batch(X_testing, Y_testing)
-
+    breakpoint()
     # Print the model summary
     input_size = (batch_size, 1, num_freq_bins) # shape compliant with the model input
     summary = torchinfo.summary(model, input_size, device=device)
 
     # Add the model graph to the tensorboard logs
-    sample_inputs = torch.randn(input_size) 
-    writer.add_graph(model, sample_inputs.to(device))
+    # sample_inputs = torch.randn(input_size) 
+    # writer.add_graph(model, sample_inputs.to(device))
 
     # Define the loss function and the optimizer
     pos_weight = calculate_weight(Y_training).to(device)
@@ -215,7 +245,7 @@ def main():
 
     # Create the dataloaders
     training_dataset = torch.utils.data.TensorDataset(X_training, Y_training)
-    training_dataloader = torch.utils.data.DataLoader(training_dataset, batch_size=batch_size, shuffle=False) # NOTE: does it make sense to shuffle?
+    training_dataloader = torch.utils.data.DataLoader(training_dataset, batch_size=batch_size, shuffle=False, collate_fn=lambda b: collate_fn_pad(b, batch_size)) # NOTE: does it make sense to shuffle?
     testing_dataset = torch.utils.data.TensorDataset(X_testing, Y_testing)
     testing_dataloader = torch.utils.data.DataLoader(testing_dataset, batch_size=batch_size, shuffle=False)
 
