@@ -230,12 +230,17 @@ def main():
         writer.add_scalar("Epoch_Loss/train", epoch_loss_train, t)
         writer.add_scalar("Epoch_Loss/test", epoch_loss_test, t)
         # TODO: add audio examples for test
-        piano_roll_training_prediction_plot, piano_roll_training_target_plot = generate_predictions(model, device, training_dataloader, num_eval_batches, start_batch=50)
+        piano_roll_training_prediction, piano_roll_training_prediction_plot, piano_roll_training_target_plot = generate_predictions(model, device, training_dataloader, num_eval_batches, start_batch=50)
         writer.add_figure("Piano_Roll/train/prediction", piano_roll_training_prediction_plot, t)
         writer.add_figure("Piano_Roll/train/target", piano_roll_training_target_plot, t)
-        piano_roll_test_prediction_plot, piano_roll_test_target_plot = generate_predictions(model, device, testing_dataloader, num_eval_batches, start_batch=10)
+        piano_roll_test_prediction, piano_roll_test_prediction_plot, piano_roll_test_target_plot = generate_predictions(model, device, testing_dataloader, num_eval_batches, start_batch=10)
         writer.add_figure("Piano_Roll/test/prediction", piano_roll_test_prediction_plot, t)
         writer.add_figure("Piano_Roll/test/target", piano_roll_test_target_plot, t)
+        if t % 50 == 0:
+            midi_output_path = os.path.join(midi_output_dir, f'output_training_{t}')
+            predictions_to_midi(piano_roll_training_prediction, midi_output_path)
+            midi_output_path = os.path.join(midi_output_dir, f'output_test_{t}')
+            predictions_to_midi(piano_roll_test_prediction, midi_output_path)
         writer.step()  
 
     writer.close()
