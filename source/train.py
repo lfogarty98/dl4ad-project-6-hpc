@@ -69,8 +69,10 @@ def test_epoch(dataloader, model, loss_fn, device, writer):
     print(f"Test Error: \n Avg loss: {test_loss:>8f} \n")
     return test_loss
 
-def predictions_to_midi(predictions):
-    pass
+def predictions_to_midi(predicted_piano_roll, path):
+
+    ppr_object = ppr.Multitrack(tracks=[ppr.StandardTrack(pianoroll=predicted_piano_roll)])
+    ppr.write(path, ppr_object)
 
 def generate_predictions(model, device, dataloader, num_eval_batches, start_batch=0):
     """
@@ -101,7 +103,7 @@ def generate_predictions(model, device, dataloader, num_eval_batches, start_batc
     # Create plots
     piano_roll_prediction_plot = plot_piano_roll(prediction, "Predicted Piano Roll")
     piano_roll_target_plot = plot_piano_roll(target, "Target Piano Roll")
-    return piano_roll_prediction_plot, piano_roll_target_plot
+    return prediction, piano_roll_prediction_plot, piano_roll_target_plot
 
 def plot_piano_roll(piano_roll, plot_title):
     """
@@ -161,6 +163,7 @@ def main():
 
     # Load the parameters from the dictionary into variables
     random_seed = params['general']['random_seed']
+    midi_output_dir = params['general']['midi_output_dir']
     epochs = params['train']['epochs']
     batch_size = params['train']['batch_size']
     learning_rate = params['train']['learning_rate']
