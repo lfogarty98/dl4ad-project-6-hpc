@@ -27,6 +27,8 @@ stages:
     - train.learning_rate
     - train.device_request
     - train.num_eval_batches
+    - train.lambda_reg
+    - train.max_voices
     outs:
     - models/checkpoints/
 #   export:
