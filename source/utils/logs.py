@@ -60,6 +60,7 @@ class CustomSummaryWriter(SummaryWriter):
         self.datetime = self._extract_datetime_from_log_dir(log_dir)
 
         if params:
+            breakpoint()
             self._log_hyperparameters(params, metrics, log_dir)
 
         self.current_step = 0

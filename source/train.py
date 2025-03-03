@@ -6,6 +6,7 @@ from pathlib import Path
 from model import NeuralNetwork
 import pypianoroll as ppr
 import matplotlib.pyplot as plt
+import os
 
 def regularizer(prediction, threshold=10):
     """
@@ -70,7 +71,7 @@ def test_epoch(dataloader, model, loss_fn, device, writer):
     return test_loss
 
 def predictions_to_midi(predicted_piano_roll, path):
-
+    predicted_piano_roll = predicted_piano_roll.cpu().numpy().squeeze()
     ppr_object = ppr.Multitrack(tracks=[ppr.StandardTrack(pianoroll=predicted_piano_roll)])
     ppr.write(path, ppr_object)
 
@@ -177,8 +178,9 @@ def main():
     # Create a SummaryWriter object to write the tensorboard logs
     tensorboard_path = logs.return_tensorboard_path()
     metrics = {'Epoch_Loss/train': None, 'Epoch_Loss/test': None, 'Batch_Loss/train': None}
+    
     writer = logs.CustomSummaryWriter(log_dir=tensorboard_path, params=params, metrics=metrics)
-
+    breakpoint()
     # Set a random seed for reproducibility across all devices. Add more devices if needed
     config.set_random_seeds(random_seed)
     
@@ -230,17 +232,17 @@ def main():
         writer.add_scalar("Epoch_Loss/train", epoch_loss_train, t)
         writer.add_scalar("Epoch_Loss/test", epoch_loss_test, t)
         # TODO: add audio examples for test
-        piano_roll_training_prediction, piano_roll_training_prediction_plot, piano_roll_training_target_plot = generate_predictions(model, device, training_dataloader, num_eval_batches, start_batch=50)
+        piano_roll_training_prediction, piano_roll_training_prediction_plot, piano_roll_training_target_plot = generate_predictions(model, device, training_dataloader, num_eval_batches, start_batch=0)
         writer.add_figure("Piano_Roll/train/prediction", piano_roll_training_prediction_plot, t)
         writer.add_figure("Piano_Roll/train/target", piano_roll_training_target_plot, t)
-        piano_roll_test_prediction, piano_roll_test_prediction_plot, piano_roll_test_target_plot = generate_predictions(model, device, testing_dataloader, num_eval_batches, start_batch=10)
+        piano_roll_test_prediction, piano_roll_test_prediction_plot, piano_roll_test_target_plot = generate_predictions(model, device, testing_dataloader, num_eval_batches, start_batch=0)
         writer.add_figure("Piano_Roll/test/prediction", piano_roll_test_prediction_plot, t)
         writer.add_figure("Piano_Roll/test/target", piano_roll_test_target_plot, t)
-        if t % 50 == 0:
-            midi_output_path = os.path.join(midi_output_dir, f'output_training_{t}')
-            predictions_to_midi(piano_roll_training_prediction, midi_output_path)
-            midi_output_path = os.path.join(midi_output_dir, f'output_test_{t}')
-            predictions_to_midi(piano_roll_test_prediction, midi_output_path)
+        # if t % 50 == 0:
+        #     midi_output_path = os.path.join(midi_output_dir, f'output_training_{t}')
+        #     predictions_to_midi(piano_roll_training_prediction, midi_output_path)
+        #     midi_output_path = os.path.join(midi_output_dir, f'output_test_{t}')
+        #     predictions_to_midi(piano_roll_test_prediction, midi_output_path)
         writer.step()  
 
     writer.close()
