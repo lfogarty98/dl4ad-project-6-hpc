@@ -6,6 +6,7 @@ from pathlib import Path
 from model import NeuralNetwork
 import pypianoroll as ppr
 import matplotlib.pyplot as plt
+import os
 
 def regularizer(prediction, threshold=10):
     """
@@ -29,6 +30,8 @@ def train_epoch(dataloader, model, loss_fn, optimizer, device, writer, epoch, la
     size = len(dataloader.dataset)
     num_batches = len(dataloader)
     train_loss = 0 
+    # Reset the last_piano_roll state before each training pass
+    model.last_piano_roll = torch.zeros(model.batch_size, 1, 128).to(device) 
     model.train()
     for batch, (X, y) in enumerate(dataloader):
         X, y = X.to(device), y.to(device)
@@ -70,7 +73,7 @@ def test_epoch(dataloader, model, loss_fn, device, writer):
     return test_loss
 
 def predictions_to_midi(predicted_piano_roll, path):
-
+    predicted_piano_roll = predicted_piano_roll.cpu().numpy().squeeze()
     ppr_object = ppr.Multitrack(tracks=[ppr.StandardTrack(pianoroll=predicted_piano_roll)])
     ppr.write(path, ppr_object)
 
@@ -196,20 +199,29 @@ def main():
     # Create the model
     num_freq_bins = X_training.shape[1] # X has shape (1, num_freq_bins, total_num_frames) (assuming mono audio)
     num_midi_classes = 128
-    # TODO: input_dim = num_freq_bins + num_midi_classes
-    model = NeuralNetwork(input_dim=num_freq_bins, hidden_dim=hidden_size, num_lstm_layers=num_lstm_layers, output_dim=num_midi_classes)
+    input_dim = num_freq_bins + num_midi_classes
+    model = NeuralNetwork(
+        input_dim=input_dim,
+        hidden_dim=hidden_size,
+        num_lstm_layers=num_lstm_layers,
+        output_dim=num_midi_classes,
+        batch_size=batch_size
+    ).to(device)
     
     # Reshape data for the model training
     X_training, Y_training = reshape_and_batch(X_training, Y_training)
     X_testing, Y_testing = reshape_and_batch(X_testing, Y_testing)
-
+    print(f'X_training shape: {X_training.shape}')
+    print(f'Y_training shape: {Y_training.shape}')
+    
     # Print the model summary
-    input_size = (batch_size, 1, num_freq_bins) # shape compliant with the model input
+    input_size = (1, 1, num_freq_bins) # shape compliant with the model input
     summary = torchinfo.summary(model, input_size, device=device)
-
+    
     # Add the model graph to the tensorboard logs
-    sample_inputs = torch.randn(input_size) 
-    writer.add_graph(model, sample_inputs.to(device))
+    # NOTE: weird behaviour here after adding output feedback to the model
+    # sample_inputs = torch.randn(input_size) 
+    # writer.add_graph(model, sample_inputs.to(device))
 
     # Define the loss function and the optimizer
     pos_weight = calculate_weight(Y_training).to(device)
@@ -217,10 +229,12 @@ def main():
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 
     # Create the dataloaders
+    # NOTE: shuffle disabled to preserve time ordering of frames/batches 
+    # NOTE: drop_last enabled to ensure all batches have the same size, so that input-output concatenation in model works
     training_dataset = torch.utils.data.TensorDataset(X_training, Y_training)
-    training_dataloader = torch.utils.data.DataLoader(training_dataset, batch_size=batch_size, shuffle=False) # NOTE: does it make sense to shuffle?
+    training_dataloader = torch.utils.data.DataLoader(training_dataset, batch_size=batch_size, shuffle=False, drop_last=True)
     testing_dataset = torch.utils.data.TensorDataset(X_testing, Y_testing)
-    testing_dataloader = torch.utils.data.DataLoader(testing_dataset, batch_size=batch_size, shuffle=False)
+    testing_dataloader = torch.utils.data.DataLoader(testing_dataset, batch_size=batch_size, shuffle=False, drop_last=True)
 
     # Training loop
     for t in range(epochs):
@@ -229,18 +243,18 @@ def main():
         epoch_loss_test = test_epoch(testing_dataloader, model, loss_fn, device, writer)
         writer.add_scalar("Epoch_Loss/train", epoch_loss_train, t)
         writer.add_scalar("Epoch_Loss/test", epoch_loss_test, t)
-        # TODO: add audio examples for test
-        piano_roll_training_prediction, piano_roll_training_prediction_plot, piano_roll_training_target_plot = generate_predictions(model, device, training_dataloader, num_eval_batches, start_batch=50)
+        piano_roll_training_prediction, piano_roll_training_prediction_plot, piano_roll_training_target_plot = generate_predictions(model, device, training_dataloader, num_eval_batches, start_batch=0)
         writer.add_figure("Piano_Roll/train/prediction", piano_roll_training_prediction_plot, t)
         writer.add_figure("Piano_Roll/train/target", piano_roll_training_target_plot, t)
-        piano_roll_test_prediction, piano_roll_test_prediction_plot, piano_roll_test_target_plot = generate_predictions(model, device, testing_dataloader, num_eval_batches, start_batch=10)
+        piano_roll_test_prediction, piano_roll_test_prediction_plot, piano_roll_test_target_plot = generate_predictions(model, device, testing_dataloader, num_eval_batches, start_batch=0)
         writer.add_figure("Piano_Roll/test/prediction", piano_roll_test_prediction_plot, t)
         writer.add_figure("Piano_Roll/test/target", piano_roll_test_target_plot, t)
-        if t % 50 == 0:
-            midi_output_path = os.path.join(midi_output_dir, f'output_training_{t}')
-            predictions_to_midi(piano_roll_training_prediction, midi_output_path)
-            midi_output_path = os.path.join(midi_output_dir, f'output_test_{t}')
-            predictions_to_midi(piano_roll_test_prediction, midi_output_path)
+        # TODO: add MIDI output
+        # if t % 50 == 0: 
+        #     midi_output_path = os.path.join(midi_output_dir, f'output_training_{t}')
+        #     predictions_to_midi(piano_roll_training_prediction, midi_output_path)
+        #     midi_output_path = os.path.join(midi_output_dir, f'output_test_{t}')
+        #     predictions_to_midi(piano_roll_test_prediction, midi_output_path)
         writer.step()  
 
     writer.close()
