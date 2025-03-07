@@ -5,7 +5,7 @@ class NeuralNetwork(nn.Module):
     def __init__(self, input_dim, hidden_dim, num_lstm_layers, output_dim, batch_size):
         super().__init__()
         self.batch_size = batch_size # initialize last_piano_roll with zeros
-        self.last_piano_roll = torch.zeros(batch_size, 1, 128)
+        self.last_piano_roll = torch.zeros(batch_size, 1, 128).to('cuda')
         # NOTE: input_dim is num_freq_bins + num_midi_classes
         self.lstm = nn.LSTM(
             input_size=input_dim, 
