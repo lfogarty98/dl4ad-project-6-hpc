@@ -97,6 +97,7 @@ def main():
     hop_length = params['preprocess']['hop_length']
     audio_dir = params['preprocess']['audio_dir']
     midi_dir = params['preprocess']['midi_dir']
+    stem_type = params['preprocess']['stem_type']
     test_split = params['preprocess']['test_split']
     
     # Create the Spectrogram transform
@@ -108,8 +109,8 @@ def main():
     )
     
     # Load raw data
-    audio_files = [os.path.join(audio_dir, filename) for filename in os.listdir(audio_dir)]
-    midi_files = [os.path.join(midi_dir, filename) for filename in os.listdir(midi_dir)]
+    audio_files = [os.path.join(audio_dir, filename) for filename in os.listdir(audio_dir) if stem_type in filename]
+    midi_files = [os.path.join(midi_dir, filename) for filename in os.listdir(midi_dir) if stem_type in filename]
     print("Raw data loaded.")
 
     # Do preprocessing

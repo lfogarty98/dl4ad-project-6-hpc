@@ -5,6 +5,7 @@ general:
 preprocess:
   audio_dir: 'data/raw/single_track/separated_jazz_track_stems'  # Directory containing the audio files
   midi_dir: 'data/raw/single_track/midi_solos'  # Directory containing the MIDI files
+  stem_type: 'guitar'
   buffer_size: 128
 
   ## Parameters for the spectrogram ##
@@ -15,7 +16,7 @@ preprocess:
   test_split: 0.2 # Fraction of data to use for testing
 
 model:
-  hidden_size: 50  # Number of hidden units in the RNN
+  hidden_size: 400  # Number of hidden units in the RNN
   num_lstm_layers: 2  # Number of LSTM layers in the RNN
 
 train:
