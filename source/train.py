@@ -17,7 +17,7 @@ def regularizer(prediction, threshold=10):
     for frame in prediction:  # Iterate over each frame (Shape: (num_frames, 1, 128))
         active_notes = torch.sum(frame > 0.5).item()  # Count nonzero (active) notes in frame
         if active_notes > threshold:  
-            penalty += (active_notes - threshold) ** 1 # Add (linear) penalty for exceeding threshold
+            penalty += (active_notes - threshold) ** 2 # Add (linear) penalty for exceeding threshold
     penalty /= prediction.shape[0]  # Average over all frames
     return penalty     
 

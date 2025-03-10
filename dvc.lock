@@ -6,7 +6,7 @@ stages:
     - path: data/raw/
       hash: md5
       md5: 47561e9b7e7b26531a5913084256c1c1.dir
-      size: 1180272297
+      size: 1180249672
       nfiles: 601
     - path: source/preprocess.py
       hash: md5
@@ -23,7 +23,7 @@ stages:
     outs:
     - path: data/processed/
       hash: md5
-      md5: 7526580159be7b705cb8fcc3943640dd.dir
+      md5: b8e40cadfb097e4e83f5b0b3702b90ce.dir
       size: 106669062
       nfiles: 1
   train:
@@ -31,44 +31,44 @@ stages:
     deps:
     - path: data/processed/
       hash: md5
-      md5: 7526580159be7b705cb8fcc3943640dd.dir
+      md5: b8e40cadfb097e4e83f5b0b3702b90ce.dir
       size: 106669062
       nfiles: 1
     - path: source/model.py
       hash: md5
-      md5: cdbe71b9c3578d92f8042de98d287b7f
-      size: 885
+      md5: 19226ced2bb895168995f890e80e7c4e
+      size: 1101
     - path: source/train.py
       hash: md5
-      md5: 8a3a33aba3ffbc31021d8465c5dc7205
-      size: 12139
+      md5: 63a1c0f4e8a92c13734099d54fb5c71c
+      size: 12686
     params:
       params.yaml:
-        model.hidden_size: 50
+        model.hidden_size: 400
         model.num_lstm_layers: 2
         train.batch_size: 4096
         train.device_request: cuda
-        train.epochs: 100
-        train.lambda_reg: 0.1
+        train.epochs: 1000
+        train.lambda_reg: 0.0
         train.learning_rate: 0.01
-        train.max_voices: 5
+        train.max_voices: 2
         train.num_eval_batches: 10
     outs:
     - path: models/checkpoints/
       hash: md5
-      md5: 29876f8c5f0d1632445f575c971b5414.dir
-      size: 562908
+      md5: af2ae005807224dc1dec6c633cc75d73.dir
+      size: 12015622
       nfiles: 1
   save_logs:
     cmd: python source/utils/logs.py
     deps:
     - path: source/utils/logs.py
       hash: md5
-      md5: f8f324f8c4eab6e3772b9fd96fd53f73
-      size: 9160
+      md5: c02425092772f434f06560a38e1960fd
+      size: 9135
     outs:
     - path: exp_logs/
       hash: md5
-      md5: 48736be406cd3225c2802ca11c59bc9a.dir
-      size: 37804777
-      nfiles: 1
+      md5: f4db342ac1b13210c7bc7883bbc584ba.dir
+      size: 103460
+      nfiles: 2
