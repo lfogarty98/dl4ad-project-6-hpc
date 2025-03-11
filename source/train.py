@@ -17,7 +17,7 @@ def regularizer(prediction, threshold=10):
     for frame in prediction:  # Iterate over each frame (Shape: (num_frames, 1, 128))
         active_notes = torch.sum(frame > 0.5).item()  # Count nonzero (active) notes in frame
         if active_notes > threshold:  
-            penalty += (active_notes - threshold) ** 1 # Add (linear) penalty for exceeding threshold
+            penalty += (active_notes - threshold) ** 2 # Add (linear) penalty for exceeding threshold
     penalty /= prediction.shape[0]  # Average over all frames
     return penalty     
 
@@ -239,7 +239,16 @@ def main():
     # Training loop
     for t in range(epochs):
         print(f"Epoch {t+1}\n-------------------------------")
-        epoch_loss_train = train_epoch(training_dataloader, model, loss_fn, optimizer, device, writer, epoch=t, lambda_reg=lambda_reg, max_voices=max_voices)
+        epoch_loss_train = train_epoch(
+            training_dataloader, 
+            model, loss_fn, 
+            optimizer, 
+            device, 
+            writer, 
+            epoch=t, 
+            lambda_reg=lambda_reg, 
+            max_voices=max_voices
+        )
         epoch_loss_test = test_epoch(testing_dataloader, model, loss_fn, device, writer)
         writer.add_scalar("Epoch_Loss/train", epoch_loss_train, t)
         writer.add_scalar("Epoch_Loss/test", epoch_loss_test, t)
