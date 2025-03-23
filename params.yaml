@@ -3,8 +3,8 @@ general:
   midi_output_dir: 'temp/midi_predictions'
 
 preprocess:
-  audio_dir: 'data/raw/single_track/separated_jazz_track_stems'  # Directory containing the audio files
-  midi_dir: 'data/raw/single_track/midi_solos'  # Directory containing the MIDI files
+  audio_dir: 'data/raw/debug/separated_jazz_track_stems'  # Directory containing the audio files
+  midi_dir: 'data/raw/debug/midi_solos'  # Directory containing the MIDI files
   buffer_size: 128
 
   ## Parameters for the spectrogram ##
@@ -20,9 +20,9 @@ model:
 
 train:
   epochs: 100  # Number of epochs to train the model
-  batch_size: 4096  # Batch size for training
+  batch_size: 1024  # Batch size for training
   learning_rate: 0.01  # Learning rate for the optimizer
   device_request: 'cuda'  # Device to use for training (cpu or cuda)
   num_eval_batches: 10  # Number of batches to evaluate on during training
-  lambda_reg: 0.1 # Regularization control parameter
+  lambda_reg: 0.0 # Regularization control parameter
   max_voices: 5  # Maximum number of voices to consider in the model
