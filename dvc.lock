@@ -5,48 +5,48 @@ stages:
     deps:
     - path: data/raw/
       hash: md5
-      md5: 47561e9b7e7b26531a5913084256c1c1.dir
-      size: 1180272297
-      nfiles: 601
+      md5: 3f34f9a57f33b971871aa2727871f66a.dir
+      size: 1183638647
+      nfiles: 603
     - path: source/preprocess.py
       hash: md5
-      md5: 038e6f0730767e1fe7135158c95c4beb
-      size: 5530
+      md5: 86878346c80cd93b1d4d7b1f949fbfec
+      size: 5640
     params:
       params.yaml:
-        preprocess.audio_dir: data/raw/single_track/separated_jazz_track_stems
+        preprocess.audio_dir: data/raw/debug/separated_jazz_track_stems
         preprocess.buffer_size: 128
         preprocess.hop_length: 1024
-        preprocess.midi_dir: data/raw/single_track/midi_solos
+        preprocess.midi_dir: data/raw/debug/midi_solos
         preprocess.n_fft: 1024
         preprocess.win_length: 1024
     outs:
     - path: data/processed/
       hash: md5
-      md5: 7526580159be7b705cb8fcc3943640dd.dir
-      size: 106669062
+      md5: 1b7ff606a72627ba195d005a689985d1.dir
+      size: 20998086
       nfiles: 1
   train:
     cmd: python source/train.py
     deps:
     - path: data/processed/
       hash: md5
-      md5: 7526580159be7b705cb8fcc3943640dd.dir
-      size: 106669062
+      md5: 1b7ff606a72627ba195d005a689985d1.dir
+      size: 20998086
       nfiles: 1
     - path: source/model.py
       hash: md5
-      md5: cdbe71b9c3578d92f8042de98d287b7f
-      size: 885
+      md5: 39e74c00fdc4440c25b10312267b9008
+      size: 1090
     - path: source/train.py
       hash: md5
-      md5: 8a3a33aba3ffbc31021d8465c5dc7205
-      size: 12139
+      md5: 2959b021e4bfea3b64b8e150db335f75
+      size: 12799
     params:
       params.yaml:
         model.hidden_size: 50
         model.num_lstm_layers: 2
-        train.batch_size: 4096
+        train.batch_size: 1024
         train.device_request: cuda
         train.epochs: 100
         train.lambda_reg: 0.1
@@ -56,19 +56,19 @@ stages:
     outs:
     - path: models/checkpoints/
       hash: md5
-      md5: 29876f8c5f0d1632445f575c971b5414.dir
-      size: 562908
+      md5: d1d737d09a22469063273b97cfd9a35a.dir
+      size: 665308
       nfiles: 1
   save_logs:
     cmd: python source/utils/logs.py
     deps:
     - path: source/utils/logs.py
       hash: md5
-      md5: f8f324f8c4eab6e3772b9fd96fd53f73
-      size: 9160
+      md5: c02425092772f434f06560a38e1960fd
+      size: 9135
     outs:
     - path: exp_logs/
       hash: md5
-      md5: 48736be406cd3225c2802ca11c59bc9a.dir
-      size: 37804777
+      md5: 6c80aa9592152220f80009653cbfa34b.dir
+      size: 1209137
       nfiles: 1
