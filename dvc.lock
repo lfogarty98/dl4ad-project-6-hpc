@@ -5,70 +5,70 @@ stages:
     deps:
     - path: data/raw/
       hash: md5
-      md5: 47561e9b7e7b26531a5913084256c1c1.dir
-      size: 1180272297
-      nfiles: 601
+      md5: 8ea91a777d100f9b38ecc953c7c41d06.dir
+      size: 1186990230
+      nfiles: 605
     - path: source/preprocess.py
       hash: md5
-      md5: 038e6f0730767e1fe7135158c95c4beb
-      size: 5530
+      md5: 86878346c80cd93b1d4d7b1f949fbfec
+      size: 5640
     params:
       params.yaml:
-        preprocess.audio_dir: data/raw/single_track/separated_jazz_track_stems
+        preprocess.audio_dir: data/raw/debug/separated_jazz_track_stems
         preprocess.buffer_size: 128
         preprocess.hop_length: 1024
-        preprocess.midi_dir: data/raw/single_track/midi_solos
+        preprocess.midi_dir: data/raw/debug/midi_solos
         preprocess.n_fft: 1024
         preprocess.win_length: 1024
     outs:
     - path: data/processed/
       hash: md5
-      md5: 7526580159be7b705cb8fcc3943640dd.dir
-      size: 106669062
+      md5: 30428c7afbc5576b910dc3430219fae2.dir
+      size: 42645958
       nfiles: 1
   train:
     cmd: python source/train.py
     deps:
     - path: data/processed/
       hash: md5
-      md5: 7526580159be7b705cb8fcc3943640dd.dir
-      size: 106669062
+      md5: 30428c7afbc5576b910dc3430219fae2.dir
+      size: 42645958
       nfiles: 1
     - path: source/model.py
       hash: md5
-      md5: cdbe71b9c3578d92f8042de98d287b7f
-      size: 885
+      md5: 39e74c00fdc4440c25b10312267b9008
+      size: 1090
     - path: source/train.py
       hash: md5
-      md5: 8a3a33aba3ffbc31021d8465c5dc7205
-      size: 12139
+      md5: b4cbc345708036e4e8974d252a7589f6
+      size: 14053
     params:
       params.yaml:
         model.hidden_size: 50
         model.num_lstm_layers: 2
-        train.batch_size: 4096
+        train.batch_size: 512
         train.device_request: cuda
         train.epochs: 100
-        train.lambda_reg: 0.1
+        train.lambda_reg: 0.5
         train.learning_rate: 0.01
-        train.max_voices: 5
+        train.max_voices: 1
         train.num_eval_batches: 10
     outs:
     - path: models/checkpoints/
       hash: md5
-      md5: 29876f8c5f0d1632445f575c971b5414.dir
-      size: 562908
+      md5: cb6173cf5e63d1be4ea8f5ba8696a909.dir
+      size: 665308
       nfiles: 1
   save_logs:
     cmd: python source/utils/logs.py
     deps:
     - path: source/utils/logs.py
       hash: md5
-      md5: f8f324f8c4eab6e3772b9fd96fd53f73
-      size: 9160
+      md5: c02425092772f434f06560a38e1960fd
+      size: 9135
     outs:
     - path: exp_logs/
       hash: md5
-      md5: 48736be406cd3225c2802ca11c59bc9a.dir
-      size: 37804777
+      md5: 6c80aa9592152220f80009653cbfa34b.dir
+      size: 1209137
       nfiles: 1
