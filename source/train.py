@@ -19,7 +19,17 @@ def regularizer(prediction, threshold=10):
         if active_notes > threshold:  
             penalty += (active_notes - threshold) ** 2 # Add (linear) penalty for exceeding threshold
     penalty /= prediction.shape[0]  # Average over all frames
-    return penalty     
+    return penalty
+
+def ppr_metrics(prediction, threshold=5):
+    """
+    Compute metrics related to the predicted piano roll.
+    """
+    penalty = 0.0
+    num_pitches = ppr.n_pitches_used(prediction)
+    if num_pitches > threshold:
+        penalty += (num_pitches - threshold) ** 2
+    return penalty
 
 def train_epoch(dataloader, model, loss_fn, optimizer, device, writer, epoch, lambda_reg=0.1, max_voices=10):
     """
@@ -42,9 +52,16 @@ def train_epoch(dataloader, model, loss_fn, optimizer, device, writer, epoch, la
 
         # Compute regularization penalty
         reg_loss = lambda_reg * regularizer(torch.sigmoid(pred), threshold=max_voices)
-
+        
+        # Compute ppr metrics
+        predicted_piano_roll = pred.detach().cpu().numpy().squeeze()
+        # ppr_object = ppr.Multitrack(tracks=[ppr.StandardTrack(pianoroll=predicted_piano_roll)])
+        lambda_ppr = 0.01
+        ppr_loss = lambda_reg * ppr_metrics(predicted_piano_roll, threshold=5)
+        # breakpoint()
+        
         # Total loss (base loss + regularization)
-        loss = base_loss + reg_loss  
+        loss = base_loss + reg_loss + ppr_loss 
         
         loss.backward()
         optimizer.step()
