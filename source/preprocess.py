@@ -111,6 +111,8 @@ def main():
     audio_files = [os.path.join(audio_dir, filename) for filename in os.listdir(audio_dir)]
     midi_files = [os.path.join(midi_dir, filename) for filename in os.listdir(midi_dir)]
     print("Raw data loaded.")
+    print(f'Number of audio files: {len(audio_files)}')
+    print(f'Number of midi files: {len(midi_files)}')
 
     # Do preprocessing
     X, Y = prepare_data(audio_files, midi_files, spectrogram_transform)
