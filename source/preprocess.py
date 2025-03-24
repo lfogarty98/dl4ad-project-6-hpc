@@ -1,3 +1,5 @@
+# import utils.debug
+
 import numpy as np
 import torch
 import torch.nn as nn
@@ -21,7 +23,7 @@ def audio_to_spectrogram(audio_file, spectrogram_transform):
     """
     Takes an audio file and returns the corresponding spectrogram.
     """
-    waveform, sample_rate = torchaudio.load(audio_file)
+    waveform, sample_rate = torchaudio.load(audio_file, format='mp3')
     # Check if the audio is stereo (multi-channel) and convert to mono
     if waveform.shape[0] > 1:
         waveform = waveform.mean(dim=0, keepdim=True)
@@ -114,6 +116,8 @@ def main():
 
     # Do preprocessing
     X, Y = prepare_data(audio_files, midi_files, spectrogram_transform)
+    X = X[...,1000:1120]  # Keep only every 2nd frame
+    Y = Y[...,1000:1120]
     print("Data preparation done.")
     
     # Print shapes of inputs and labels

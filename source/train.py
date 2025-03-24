@@ -1,3 +1,5 @@
+import utils.debug
+
 import torch
 import torch.nn as nn
 import torchinfo
@@ -5,6 +7,8 @@ from utils import logs, config
 from pathlib import Path
 from model import NeuralNetwork
 import pypianoroll as ppr
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import os
 
@@ -44,11 +48,12 @@ def train_epoch(dataloader, model, loss_fn, optimizer, device, writer, epoch, la
         reg_loss = lambda_reg * regularizer(torch.sigmoid(pred), threshold=max_voices)
 
         # Total loss (base loss + regularization)
-        loss = base_loss + reg_loss  
+        loss = base_loss
         
-        loss.backward()
+        loss.backward()  # Retain graph for the next iteration
         optimizer.step()
         optimizer.zero_grad()
+        model.detach_hidden()  # Detach hidden state to avoid backpropagation through time
         writer.add_scalar("Batch_Loss/train", loss.item(), batch + epoch * len(dataloader))
         writer.add_scalar("Batch_Regularization_Loss/train", reg_loss, batch + epoch * len(dataloader))  # Log reg loss separately
         train_loss += loss.item()
@@ -100,12 +105,17 @@ def generate_predictions(model, device, dataloader, num_eval_batches, start_batc
             X = X.to(device)
             y = y.to(device)
             predicted_batch = model(X)
-            predicted_batch_binary = (predicted_batch > 0.5).float()  # Binarize the prediction
-            prediction = torch.cat((prediction, predicted_batch_binary), 0)
+            # predicted_batch_binary = (predicted_batch > 0.5).float()  # Binarize the prediction
+            predicted_batch = torch.sigmoid(predicted_batch)
+            prediction = torch.cat((prediction, predicted_batch), 0)
             target = torch.cat((target, y), 0)
     # Create plots
     piano_roll_prediction_plot = plot_piano_roll(prediction, "Predicted Piano Roll")
+    plt.savefig('/home/faressc/test/dl4ad-project-6-hpc/predicted_piano_roll.png')
+    plt.close()
     piano_roll_target_plot = plot_piano_roll(target, "Target Piano Roll")
+    plt.savefig('/home/faressc/test/dl4ad-project-6-hpc/target_piano_roll.png')
+    plt.close()
     return prediction, piano_roll_prediction_plot, piano_roll_target_plot
 
 def plot_piano_roll(piano_roll, plot_title):
@@ -116,7 +126,7 @@ def plot_piano_roll(piano_roll, plot_title):
     piano_roll = piano_roll.cpu().numpy().squeeze()
     piano_roll = piano_roll.T
     fig, ax = plt.subplots(figsize=(12, 6))
-    ax.imshow(piano_roll, cmap="gray", aspect="auto", origin="lower")
+    ax.imshow(piano_roll, cmap="gray", aspect="auto", origin="lower", vmin=0, vmax=1)
     ax.set_xlabel("Frame")
     ax.set_ylabel("MIDI Note")
     ax.set_title(plot_title)
@@ -199,7 +209,8 @@ def main():
     # Create the model
     num_freq_bins = X_training.shape[1] # X has shape (1, num_freq_bins, total_num_frames) (assuming mono audio)
     num_midi_classes = 128
-    input_dim = num_freq_bins + num_midi_classes
+    # input_dim = num_freq_bins + num_midi_classes
+    input_dim = num_freq_bins
     model = NeuralNetwork(
         input_dim=input_dim,
         hidden_dim=hidden_size,
@@ -216,7 +227,7 @@ def main():
     
     # Print the model summary
     input_size = (1, 1, num_freq_bins) # shape compliant with the model input
-    summary = torchinfo.summary(model, input_size, device=device)
+    # summary = torchinfo.summary(model, input_size, device=device)
     
     # Add the model graph to the tensorboard logs
     # NOTE: weird behaviour here after adding output feedback to the model
@@ -232,9 +243,9 @@ def main():
     # NOTE: shuffle disabled to preserve time ordering of frames/batches 
     # NOTE: drop_last enabled to ensure all batches have the same size, so that input-output concatenation in model works
     training_dataset = torch.utils.data.TensorDataset(X_training, Y_training)
-    training_dataloader = torch.utils.data.DataLoader(training_dataset, batch_size=batch_size, shuffle=False, drop_last=True)
+    training_dataloader = torch.utils.data.DataLoader(training_dataset, batch_size=batch_size, shuffle=False, drop_last=False)
     testing_dataset = torch.utils.data.TensorDataset(X_testing, Y_testing)
-    testing_dataloader = torch.utils.data.DataLoader(testing_dataset, batch_size=batch_size, shuffle=False, drop_last=True)
+    testing_dataloader = torch.utils.data.DataLoader(testing_dataset, batch_size=batch_size, shuffle=False, drop_last=False)
 
     # Training loop
     for t in range(epochs):
@@ -255,9 +266,9 @@ def main():
         piano_roll_training_prediction, piano_roll_training_prediction_plot, piano_roll_training_target_plot = generate_predictions(model, device, training_dataloader, num_eval_batches, start_batch=0)
         writer.add_figure("Piano_Roll/train/prediction", piano_roll_training_prediction_plot, t)
         writer.add_figure("Piano_Roll/train/target", piano_roll_training_target_plot, t)
-        piano_roll_test_prediction, piano_roll_test_prediction_plot, piano_roll_test_target_plot = generate_predictions(model, device, testing_dataloader, num_eval_batches, start_batch=0)
-        writer.add_figure("Piano_Roll/test/prediction", piano_roll_test_prediction_plot, t)
-        writer.add_figure("Piano_Roll/test/target", piano_roll_test_target_plot, t)
+        # piano_roll_test_prediction, piano_roll_test_prediction_plot, piano_roll_test_target_plot = generate_predictions(model, device, testing_dataloader, num_eval_batches, start_batch=0)
+        # writer.add_figure("Piano_Roll/test/prediction", piano_roll_test_prediction_plot, t)
+        # writer.add_figure("Piano_Roll/test/target", piano_roll_test_target_plot, t)
         # TODO: add MIDI output
         # if t % 50 == 0: 
         #     midi_output_path = os.path.join(midi_output_dir, f'output_training_{t}')

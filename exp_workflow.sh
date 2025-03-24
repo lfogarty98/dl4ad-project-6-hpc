@@ -68,11 +68,11 @@ fi &&
 
 # Run the experiment with passed parameters. Runs with the default parameters if none are passed.
 echo "Running experiment..." &&
-dvc exp run $EXP_PARAMS &&
+dvc exp run $EXP_PARAMS -f &&
 
 # Push the results to the DVC remote repository
 echo "Pushing experiment..." &&
-dvc exp push origin &&
+# dvc exp push origin &&
 
 # Clean up the temporary sub-directory
 echo "Cleaning up..." &&
