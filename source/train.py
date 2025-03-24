@@ -8,18 +8,44 @@ import pypianoroll as ppr
 import matplotlib.pyplot as plt
 import os
 
+# def regularizer(prediction, threshold=10):
+#     """
+#     Regularizer which penalizes frames that have too many active notes by returning a 
+#     penalty that increases as more notes exceed the given threshold.
+#     """
+#     penalty = 0.0  # Initialize penalty
+#     for frame in prediction:  # Iterate over each frame (Shape: (num_frames, 1, 128))
+#         active_notes = torch.sum(frame > 0.5).item()  # Count nonzero (active) notes in frame
+#         if active_notes > threshold:  
+#             penalty += (active_notes - threshold) ** 2 # Add (linear) penalty for exceeding threshold
+#     penalty /= prediction.shape[0]  # Average over all frames
+#     return penalty
+
 def regularizer(prediction, threshold=10):
     """
-    Regularizer which penalizes frames that have too many active notes by returning a 
-    penalty that increases as more notes exceed the given threshold.
+    Regularizer which penalizes frames that have too many active notes.
     """
-    penalty = 0.0  # Initialize penalty
-    for frame in prediction:  # Iterate over each frame (Shape: (num_frames, 1, 128))
-        active_notes = torch.sum(frame > 0.5).item()  # Count nonzero (active) notes in frame
-        if active_notes > threshold:  
-            penalty += (active_notes - threshold) ** 2 # Add (linear) penalty for exceeding threshold
-    penalty /= prediction.shape[0]  # Average over all frames
-    return penalty     
+    # Convert prediction into a binary mask (1 = active, 0 = inactive)
+    prediction_binary = (prediction > 0.5).float()
+
+    # Count active notes per frame
+    active_notes_per_frame = prediction_binary.sum(dim=-1)  # Sum over last dimension (MIDI notes)
+
+    # Compute penalty: (num_active_notes - threshold)², only if num_active_notes > threshold
+    excess_notes = (active_notes_per_frame - threshold).clamp(min=0)  # Only penalize excess
+    penalty = (excess_notes ** 2).mean()  # Compute average penalty across frames
+
+    return penalty  # Returns a tensor with gradients
+
+def ppr_metrics(prediction, threshold=5):
+    """
+    Compute metrics related to the predicted piano roll.
+    """
+    prediction_binary = (prediction > 0.5).float()
+    # TODO: make the following operation differentiable!
+    num_pitches = torch.any(prediction_binary.squeeze() != 0, dim=1).sum()
+    penalty = (num_pitches - threshold).clamp(min=0) ** 2
+    return penalty
 
 def train_epoch(dataloader, model, loss_fn, optimizer, device, writer, epoch, lambda_reg=0.1, max_voices=10):
     """
@@ -42,9 +68,13 @@ def train_epoch(dataloader, model, loss_fn, optimizer, device, writer, epoch, la
 
         # Compute regularization penalty
         reg_loss = lambda_reg * regularizer(torch.sigmoid(pred), threshold=max_voices)
-
+        
+        # Compute ppr metrics
+        lambda_ppr = 0.0
+        ppr_loss = lambda_ppr * ppr_metrics(pred, threshold=6)
+        
         # Total loss (base loss + regularization)
-        loss = base_loss + reg_loss  
+        loss = base_loss + reg_loss + ppr_loss 
         
         loss.backward()
         optimizer.step()
