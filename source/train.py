@@ -5,7 +5,7 @@ import torch.nn as nn
 import torchinfo
 from utils import logs, config
 from pathlib import Path
-from model import NeuralNetwork
+from model import NeuralNetwork, SimpleNeuralNetwork
 import pypianoroll as ppr
 import matplotlib
 matplotlib.use('Agg')
@@ -35,7 +35,7 @@ def train_epoch(dataloader, model, loss_fn, optimizer, device, writer, epoch, la
     num_batches = len(dataloader)
     train_loss = 0 
     # Reset the last_piano_roll state before each training pass
-    model.last_piano_roll = torch.zeros(model.batch_size, 1, 128).to(device) 
+    # model.last_piano_roll = torch.zeros(model.batch_size, 1, 128).to(device) 
     model.train()
     for batch, (X, y) in enumerate(dataloader):
         X, y = X.to(device), y.to(device)
@@ -53,7 +53,8 @@ def train_epoch(dataloader, model, loss_fn, optimizer, device, writer, epoch, la
         loss.backward()  # Retain graph for the next iteration
         optimizer.step()
         optimizer.zero_grad()
-        model.detach_hidden()  # Detach hidden state to avoid backpropagation through time
+        # model.detach_hidden()  # Detach hidden state to avoid backpropagation through time
+        
         writer.add_scalar("Batch_Loss/train", loss.item(), batch + epoch * len(dataloader))
         writer.add_scalar("Batch_Regularization_Loss/train", reg_loss, batch + epoch * len(dataloader))  # Log reg loss separately
         train_loss += loss.item()
@@ -111,10 +112,10 @@ def generate_predictions(model, device, dataloader, num_eval_batches, start_batc
             target = torch.cat((target, y), 0)
     # Create plots
     piano_roll_prediction_plot = plot_piano_roll(prediction, "Predicted Piano Roll")
-    plt.savefig('/home/faressc/test/dl4ad-project-6-hpc/predicted_piano_roll.png')
+    plt.savefig('/Users/DiarmuidFogarty/repos/dl4ad-project-6-hpc/predicted_piano_roll.png')
     plt.close()
     piano_roll_target_plot = plot_piano_roll(target, "Target Piano Roll")
-    plt.savefig('/home/faressc/test/dl4ad-project-6-hpc/target_piano_roll.png')
+    plt.savefig('/Users/DiarmuidFogarty/repos/dl4ad-project-6-hpc/target_piano_roll.png')
     plt.close()
     return prediction, piano_roll_prediction_plot, piano_roll_target_plot
 
@@ -211,13 +212,14 @@ def main():
     num_midi_classes = 128
     # input_dim = num_freq_bins + num_midi_classes
     input_dim = num_freq_bins
-    model = NeuralNetwork(
-        input_dim=input_dim,
-        hidden_dim=hidden_size,
-        num_lstm_layers=num_lstm_layers,
-        output_dim=num_midi_classes,
-        batch_size=batch_size
-    ).to(device)
+    # model = NeuralNetwork(
+    #     input_dim=input_dim,
+    #     hidden_dim=hidden_size,
+    #     num_lstm_layers=num_lstm_layers,
+    #     output_dim=num_midi_classes,
+    #     batch_size=batch_size
+    # ).to(device)
+    model = SimpleNeuralNetwork(input_dim, hidden_size, num_midi_classes).to(device)
     
     # Reshape data for the model training
     X_training, Y_training = reshape_and_batch(X_training, Y_training)

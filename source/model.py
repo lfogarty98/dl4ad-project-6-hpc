@@ -16,6 +16,7 @@ class NeuralNetwork(nn.Module):
         )
         self.sigmoid_inter = nn.Sigmoid()
         self.linear = nn.Linear(in_features=hidden_dim, out_features=output_dim)
+        
         torch.nn.init.zeros_(self.linear.bias) # Zero initialization
         self.hidden = torch.zeros(num_lstm_layers, 1, hidden_dim)
         self.cell = torch.zeros(num_lstm_layers, 1, hidden_dim)
@@ -35,3 +36,27 @@ class NeuralNetwork(nn.Module):
     def detach_hidden(self):
         self.hidden = self.hidden.detach()
         self.cell = self.cell.detach()
+        
+
+"""
+This is a simple stacked feedforward neural network with ReLU activation functions for debugging purposes.
+This model is able to perfectly predict 
+"""
+class SimpleNeuralNetwork(nn.Module):
+    def __init__(self, input_dim, hidden_dim, output_dim):
+        super().__init__()
+        self.linear_stack = nn.Sequential(
+            nn.Linear(input_dim, hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, output_dim)
+        )
+        for layer in self.linear_stack:
+            if isinstance(layer, nn.Linear):
+                torch.nn.init.xavier_uniform_(layer.weight)
+                torch.nn.init.zeros_(layer.bias)
+
+    def forward(self, x):
+        x = self.linear_stack(x)
+        return x
