@@ -8,20 +8,20 @@ preprocess:
   buffer_size: 128
 
   ## Parameters for the spectrogram ##
-  n_fft: 1024  # Size of the FFT window
-  win_length: 1024  # Window length (can be same as n_fft)
-  hop_length: 1024  # Hop length equal to n_fft (no overlap)
+  n_fft: &n_fft 4096  # Size of the FFT window
+  win_length: *n_fft  # Window length (can be same as n_fft)
+  hop_length: *n_fft  # Hop length equal to n_fft (no overlap)
   
   test_split: 0.2 # Fraction of data to use for testing
 
 model:
-  hidden_size: 500  # Number of hidden units in the RNN
+  hidden_size: 1500  # Number of hidden units in the RNN
   num_lstm_layers: 1  # Number of LSTM layers in the RNN
 
 train:
   epochs: 200  # Number of epochs to train the model
   batch_size: 128  # Batch size for training
-  learning_rate: 0.01  # Learning rate for the optimizer
+  learning_rate: 0.005  # Learning rate for the optimizer
   device_request: 'cuda'  # Device to use for training (cpu or cuda)
   num_eval_batches: 10  # Number of batches to evaluate on during training
   lambda_reg: 0.0 # Regularization control parameter

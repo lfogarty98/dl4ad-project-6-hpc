@@ -36,7 +36,41 @@ class NeuralNetwork(nn.Module):
     def detach_hidden(self):
         self.hidden = self.hidden.detach()
         self.cell = self.cell.detach()
-        
+
+
+class DebugNeuralNetwork(nn.Module):
+    def __init__(self, input_dim, hidden_dim, num_lstm_layers, output_dim):
+        super().__init__()
+        self.lstm = nn.LSTM(
+            input_size=input_dim,
+            hidden_size=hidden_dim,
+            num_layers=num_lstm_layers)
+        self.linear_stack = nn.Sequential(
+            nn.Linear(hidden_dim, hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, output_dim)
+        )
+        for layer in self.linear_stack:
+            if isinstance(layer, nn.Linear):
+                torch.nn.init.xavier_uniform_(layer.weight)
+                torch.nn.init.zeros_(layer.bias)
+
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.hidden = torch.zeros(num_lstm_layers, 1, hidden_dim).to(device)
+        self.cell = torch.zeros(num_lstm_layers, 1, hidden_dim).to(device)
+
+    def forward(self, x):
+        x, (hidden, cell) = self.lstm(x, (self.hidden, self.cell))
+        self.hidden = hidden
+        self.cell = cell
+        x = self.linear_stack(x)
+        return x
+
+    def detach_hidden(self):
+        self.hidden = self.hidden.detach()
+        self.cell = self.cell.detach()
 
 """
 This is a simple stacked feedforward neural network with ReLU activation functions for debugging purposes.

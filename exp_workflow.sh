@@ -57,9 +57,11 @@ done &&
 # Change the working directory to the temporary sub-directory
 cd $TUSTU_EXP_TMP_DIR &&
 
+source "$DEFAULT_DIR/venv/bin/activate"
+
 # Set the DVC cache directory to the shared cache located in the host directory
 echo "Setting DVC cache directory..." &&
-dvc cache dir $DEFAULT_DIR/.dvc/cache &&
+dvc cache dir "$DEFAULT_DIR/.dvc/cache" &&
 
 # Pull the data from the DVC remote repository
 if [ -f "data/raw.dvc" ]; then
