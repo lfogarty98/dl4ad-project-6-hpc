@@ -39,14 +39,31 @@ class NeuralNetwork(nn.Module):
         
 
 """
-This is a simple stacked feedforward neural network with ReLU activation functions for debugging purposes.
-This model is able to perfectly predict 
+This model is for debugging purposes.
 """
 class SimpleNeuralNetwork(nn.Module):
-    def __init__(self, input_dim, hidden_dim, output_dim):
+    def __init__(self, input_dim, hidden_dim, output_dim, num_lstm_layers=1):
         super().__init__()
+        
+        self.input_dim = input_dim
+        self.hidden_dim = hidden_dim
+        self.num_lstm_layers = num_lstm_layers
+        
+        self.lstm = nn.LSTM(input_size=input_dim, hidden_size=hidden_dim, num_layers=num_lstm_layers)
+        self.hidden = torch.zeros(self.num_lstm_layers, 1, hidden_dim) # NOTE: docs say hidden should be of shape (D, N, H)
+        self.cell = torch.zeros(self.num_lstm_layers, 1, hidden_dim)
+        
+        for layer in range(self.num_lstm_layers):
+            torch.nn.init.xavier_uniform_(getattr(self.lstm, f'weight_ih_l{layer}'))
+            torch.nn.init.xavier_uniform_(getattr(self.lstm, f'weight_hh_l{layer}'))
+            torch.nn.init.zeros_(getattr(self.lstm, f'bias_ih_l{layer}'))
+            torch.nn.init.zeros_(getattr(self.lstm, f'bias_hh_l{layer}'))
+        
+        self.relu = nn.ReLU()
+        
         self.linear_stack = nn.Sequential(
-            nn.Linear(input_dim, hidden_dim),
+            # nn.Linear(input_dim, hidden_dim),
+            nn.Linear(hidden_dim, hidden_dim), # for connecting to LSTM
             nn.ReLU(),
             nn.Linear(hidden_dim, hidden_dim),
             nn.ReLU(),
@@ -58,5 +75,15 @@ class SimpleNeuralNetwork(nn.Module):
                 torch.nn.init.zeros_(layer.bias)
 
     def forward(self, x):
+        x, (self.hidden, self.cell) = self.lstm(x, (self.hidden, self.cell))
+        x = self.relu(x)
         x = self.linear_stack(x)
         return x
+    
+    def detach_hidden(self):
+        self.hidden = self.hidden.detach()
+        self.cell = self.cell.detach()
+        
+    def reset_hidden(self):
+        self.hidden = torch.zeros(self.num_lstm_layers, 1, self.hidden_dim)
+        self.cell = torch.zeros(self.num_lstm_layers, 1, self.hidden_dim)

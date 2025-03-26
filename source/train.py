@@ -36,6 +36,7 @@ def train_epoch(dataloader, model, loss_fn, optimizer, device, writer, epoch, la
     train_loss = 0 
     # Reset the last_piano_roll state before each training pass
     # model.last_piano_roll = torch.zeros(model.batch_size, 1, 128).to(device) 
+    model.reset_hidden()
     model.train()
     for batch, (X, y) in enumerate(dataloader):
         X, y = X.to(device), y.to(device)
@@ -52,8 +53,8 @@ def train_epoch(dataloader, model, loss_fn, optimizer, device, writer, epoch, la
         
         loss.backward()  # Retain graph for the next iteration
         optimizer.step()
+        model.detach_hidden()  # Detach hidden state to avoid backpropagation through time
         optimizer.zero_grad()
-        # model.detach_hidden()  # Detach hidden state to avoid backpropagation through time
         
         writer.add_scalar("Batch_Loss/train", loss.item(), batch + epoch * len(dataloader))
         writer.add_scalar("Batch_Regularization_Loss/train", reg_loss, batch + epoch * len(dataloader))  # Log reg loss separately
@@ -83,7 +84,7 @@ def predictions_to_midi(predicted_piano_roll, path):
     ppr_object = ppr.Multitrack(tracks=[ppr.StandardTrack(pianoroll=predicted_piano_roll)])
     ppr.write(path, ppr_object)
 
-def generate_predictions(model, device, dataloader, num_eval_batches, start_batch=0):
+def generate_predictions(model, device, dataloader, num_eval_batches, start_batch=0, plot_path='training'):
     """
     Generate predictions (concantenated normalized piano roll matrices) using the model and the testing dataloader.
     Since the training data is effectively one long stream of audio and midi, num_eval_batches specifies the number
@@ -112,11 +113,11 @@ def generate_predictions(model, device, dataloader, num_eval_batches, start_batc
             target = torch.cat((target, y), 0)
     # Create plots
     piano_roll_prediction_plot = plot_piano_roll(prediction, "Predicted Piano Roll")
-    plt.savefig('/Users/DiarmuidFogarty/repos/dl4ad-project-6-hpc/predicted_piano_roll.png')
-    plt.close()
+    plt.savefig(f'/Users/DiarmuidFogarty/repos/dl4ad-project-6-hpc/plots/{plot_path}/predicted_piano_roll.png')
+    # plt.close()
     piano_roll_target_plot = plot_piano_roll(target, "Target Piano Roll")
-    plt.savefig('/Users/DiarmuidFogarty/repos/dl4ad-project-6-hpc/target_piano_roll.png')
-    plt.close()
+    plt.savefig(f'/Users/DiarmuidFogarty/repos/dl4ad-project-6-hpc/plots/{plot_path}/target_piano_roll.png')
+    # plt.close()
     return prediction, piano_roll_prediction_plot, piano_roll_target_plot
 
 def plot_piano_roll(piano_roll, plot_title):
@@ -265,10 +266,10 @@ def main():
         epoch_loss_test = test_epoch(testing_dataloader, model, loss_fn, device, writer)
         writer.add_scalar("Epoch_Loss/train", epoch_loss_train, t)
         writer.add_scalar("Epoch_Loss/test", epoch_loss_test, t)
-        piano_roll_training_prediction, piano_roll_training_prediction_plot, piano_roll_training_target_plot = generate_predictions(model, device, training_dataloader, num_eval_batches, start_batch=0)
+        piano_roll_training_prediction, piano_roll_training_prediction_plot, piano_roll_training_target_plot = generate_predictions(model, device, training_dataloader, num_eval_batches, start_batch=0, plot_path='train')
         writer.add_figure("Piano_Roll/train/prediction", piano_roll_training_prediction_plot, t)
         writer.add_figure("Piano_Roll/train/target", piano_roll_training_target_plot, t)
-        # piano_roll_test_prediction, piano_roll_test_prediction_plot, piano_roll_test_target_plot = generate_predictions(model, device, testing_dataloader, num_eval_batches, start_batch=0)
+        piano_roll_test_prediction, piano_roll_test_prediction_plot, piano_roll_test_target_plot = generate_predictions(model, device, testing_dataloader, num_eval_batches, start_batch=0, plot_path='test')
         # writer.add_figure("Piano_Roll/test/prediction", piano_roll_test_prediction_plot, t)
         # writer.add_figure("Piano_Roll/test/target", piano_roll_test_target_plot, t)
         # TODO: add MIDI output
