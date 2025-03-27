@@ -1,47 +1,33 @@
 import torch
 from torch import nn
 
-class NeuralNetwork(nn.Module):
-    def __init__(self, input_dim, hidden_dim, num_lstm_layers, output_dim, batch_size):
+"""
+This model is a simple feedforward neural network, consisting solely of 
+linear layers with ReLU activation functions.
+"""
+class LinearNetwork(nn.Module):
+    def __init__(self, input_dim, hidden_dim, output_dim):
         super().__init__()
-        self.batch_size = batch_size # initialize last_piano_roll with zeros
-        self.last_piano_roll = torch.zeros(batch_size, 1, 128)
-        # NOTE: input_dim is num_freq_bins + num_midi_classes
-        self.lstm = nn.LSTM(
-            input_size=input_dim, 
-            hidden_size=hidden_dim, 
-            num_layers=num_lstm_layers, 
-            batch_first=False, 
-            bias=True
+        self.linear_stack = nn.Sequential(
+            nn.Linear(input_dim, hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, output_dim)
         )
-        self.sigmoid_inter = nn.Sigmoid()
-        self.linear = nn.Linear(in_features=hidden_dim, out_features=output_dim)
-        
-        torch.nn.init.zeros_(self.linear.bias) # Zero initialization
-        self.hidden = torch.zeros(num_lstm_layers, 1, hidden_dim)
-        self.cell = torch.zeros(num_lstm_layers, 1, hidden_dim)
-
+        for layer in self.linear_stack:
+            if isinstance(layer, nn.Linear):
+                torch.nn.init.xavier_uniform_(layer.weight)
+                torch.nn.init.zeros_(layer.bias)
 
     def forward(self, x):
-        # self.last_piano_roll = self.last_piano_roll.detach() # NOTE: avoids backward problem, not quite sure how this works
-        # x = torch.cat((x, self.last_piano_roll[:x.shape[0], :, :]), dim=-1)
-        x, (hidden, cell) = self.lstm(x, (self.hidden, self.cell))
-        self.hidden = hidden
-        self.cell = cell
-        # x = self.sigmoid_inter(x)
-        # x = self.linear(x)
-        self.last_piano_roll = x
+        x = self.linear_stack(x)
         return x
-    
-    def detach_hidden(self):
-        self.hidden = self.hidden.detach()
-        self.cell = self.cell.detach()
-        
 
 """
-This model is for debugging purposes.
+This model prepends an LSTM layer to a stack of linear layers.
 """
-class SimpleNeuralNetwork(nn.Module):
+class LSTMNetwork(nn.Module):
     def __init__(self, input_dim, hidden_dim, output_dim, num_lstm_layers=1):
         super().__init__()
         
@@ -87,3 +73,45 @@ class SimpleNeuralNetwork(nn.Module):
     def reset_hidden(self):
         self.hidden = torch.zeros(self.num_lstm_layers, 1, self.hidden_dim)
         self.cell = torch.zeros(self.num_lstm_layers, 1, self.hidden_dim)
+
+"""
+Original model we began with, which consists of an LSTM layer followed by a linear layer.
+Includes a feedback loop that feeds the output of the linear layer back into the LSTM layer,
+such that the last predicted piano roll is used as input for the next prediction.
+Currently not functional, and is missing some key components.
+"""
+class NeuralNetwork(nn.Module):
+    def __init__(self, input_dim, hidden_dim, num_lstm_layers, output_dim, batch_size):
+        super().__init__()
+        self.batch_size = batch_size # initialize last_piano_roll with zeros
+        self.last_piano_roll = torch.zeros(batch_size, 1, 128)
+        # NOTE: input_dim is num_freq_bins + num_midi_classes
+        self.lstm = nn.LSTM(
+            input_size=input_dim, 
+            hidden_size=hidden_dim, 
+            num_layers=num_lstm_layers, 
+            batch_first=False, 
+            bias=True
+        )
+        self.sigmoid_inter = nn.Sigmoid()
+        self.linear = nn.Linear(in_features=hidden_dim, out_features=output_dim)
+        
+        torch.nn.init.zeros_(self.linear.bias) # Zero initialization
+        self.hidden = torch.zeros(num_lstm_layers, 1, hidden_dim)
+        self.cell = torch.zeros(num_lstm_layers, 1, hidden_dim)
+
+
+    def forward(self, x):
+        # self.last_piano_roll = self.last_piano_roll.detach() # NOTE: avoids backward problem, not quite sure how this works
+        # x = torch.cat((x, self.last_piano_roll[:x.shape[0], :, :]), dim=-1)
+        x, (hidden, cell) = self.lstm(x, (self.hidden, self.cell))
+        self.hidden = hidden
+        self.cell = cell
+        # x = self.sigmoid_inter(x)
+        # x = self.linear(x)
+        self.last_piano_roll = x
+        return x
+    
+    def detach_hidden(self):
+        self.hidden = self.hidden.detach()
+        self.cell = self.cell.detach()

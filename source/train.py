@@ -5,7 +5,7 @@ import torch.nn as nn
 import torchinfo
 from utils import logs, config
 from pathlib import Path
-from model import NeuralNetwork, SimpleNeuralNetwork
+from model import NeuralNetwork, LinearNetwork, LSTMNetwork
 import pypianoroll as ppr
 import matplotlib
 matplotlib.use('Agg')
@@ -36,7 +36,8 @@ def train_epoch(dataloader, model, loss_fn, optimizer, device, writer, epoch, la
     train_loss = 0 
     # Reset the last_piano_roll state before each training pass
     # model.last_piano_roll = torch.zeros(model.batch_size, 1, 128).to(device) 
-    model.reset_hidden()
+    # Reset the hidden state before each training pass
+    # model.reset_hidden()
     model.train()
     for batch, (X, y) in enumerate(dataloader):
         X, y = X.to(device), y.to(device)
@@ -45,19 +46,19 @@ def train_epoch(dataloader, model, loss_fn, optimizer, device, writer, epoch, la
         # Compute base loss (scaled by 10)
         base_loss = 1 * loss_fn(pred, y)
 
-        # Compute regularization penalty
-        reg_loss = lambda_reg * regularizer(torch.sigmoid(pred), threshold=max_voices)
+        # # Compute regularization penalty
+        # reg_loss = lambda_reg * regularizer(torch.sigmoid(pred), threshold=max_voices)
 
         # Total loss (base loss + regularization)
         loss = base_loss
         
         loss.backward()  # Retain graph for the next iteration
         optimizer.step()
-        model.detach_hidden()  # Detach hidden state to avoid backpropagation through time
+        # model.detach_hidden()  # Detach hidden state to avoid backpropagation through time
         optimizer.zero_grad()
         
         writer.add_scalar("Batch_Loss/train", loss.item(), batch + epoch * len(dataloader))
-        writer.add_scalar("Batch_Regularization_Loss/train", reg_loss, batch + epoch * len(dataloader))  # Log reg loss separately
+        # writer.add_scalar("Batch_Regularization_Loss/train", reg_loss, batch + epoch * len(dataloader))  # Log reg loss separately
         train_loss += loss.item()
         if batch % 100 == 0:
             loss_value = loss.item()
@@ -220,7 +221,7 @@ def main():
     #     output_dim=num_midi_classes,
     #     batch_size=batch_size
     # ).to(device)
-    model = SimpleNeuralNetwork(input_dim, hidden_size, num_midi_classes).to(device)
+    model = LinearNetwork(input_dim, hidden_size, num_midi_classes).to(device)
     
     # Reshape data for the model training
     X_training, Y_training = reshape_and_batch(X_training, Y_training)
