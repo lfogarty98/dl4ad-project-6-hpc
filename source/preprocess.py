@@ -116,8 +116,6 @@ def main():
 
     # Do preprocessing
     X, Y = prepare_data(audio_files, midi_files, spectrogram_transform)
-    X = X[...,800:1120]  # Keep only a subset of the frames
-    Y = Y[...,800:1120]
     print("Data preparation done.")
     
     # Print shapes of inputs and labels
