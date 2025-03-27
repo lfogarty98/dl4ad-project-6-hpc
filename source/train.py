@@ -17,12 +17,7 @@ def regularizer(prediction, threshold=10):
     Regularizer which penalizes frames that have too many active notes by returning a 
     penalty that increases as more notes exceed the given threshold.
     """
-    penalty = 0.0  # Initialize penalty
-    for frame in prediction:  # Iterate over each frame (Shape: (num_frames, 1, 128))
-        active_notes = torch.sum(frame > 0.5).item()  # Count nonzero (active) notes in frame
-        if active_notes > threshold:  
-            penalty += (active_notes - threshold) ** 2 # Add (linear) penalty for exceeding threshold
-    penalty /= prediction.shape[0]  # Average over all frames
+    penalty = prediction.squeeze().sum()
     return penalty     
 
 def train_epoch(dataloader, model, loss_fn, optimizer, device, writer, epoch, lambda_reg=0.1, max_voices=10):
@@ -47,9 +42,10 @@ def train_epoch(dataloader, model, loss_fn, optimizer, device, writer, epoch, la
         base_loss = 1 * loss_fn(pred, y)
 
         # # Compute regularization penalty
-        # reg_loss = lambda_reg * regularizer(torch.sigmoid(pred), threshold=max_voices)
+        # reg_loss = lambda_reg * regularizer(pred, threshold=max_voices)
 
         # Total loss (base loss + regularization)
+        # loss = base_loss + reg_loss
         loss = base_loss
         
         loss.backward()  # Retain graph for the next iteration
@@ -114,11 +110,11 @@ def generate_predictions(model, device, dataloader, num_eval_batches, start_batc
             target = torch.cat((target, y), 0)
     # Create plots
     piano_roll_prediction_plot = plot_piano_roll(prediction, "Predicted Piano Roll")
-    plt.savefig(f'/Users/DiarmuidFogarty/repos/dl4ad-project-6-hpc/plots/{plot_path}/predicted_piano_roll.png')
-    # plt.close()
+    # plt.savefig(f'/Users/DiarmuidFogarty/repos/dl4ad-project-6-hpc/plots/{plot_path}/predicted_piano_roll.png')
+    # # plt.close()
     piano_roll_target_plot = plot_piano_roll(target, "Target Piano Roll")
-    plt.savefig(f'/Users/DiarmuidFogarty/repos/dl4ad-project-6-hpc/plots/{plot_path}/target_piano_roll.png')
-    # plt.close()
+    # plt.savefig(f'/Users/DiarmuidFogarty/repos/dl4ad-project-6-hpc/plots/{plot_path}/target_piano_roll.png')
+    # # plt.close()
     return prediction, piano_roll_prediction_plot, piano_roll_target_plot
 
 def plot_piano_roll(piano_roll, plot_title):
@@ -251,6 +247,10 @@ def main():
     testing_dataset = torch.utils.data.TensorDataset(X_testing, Y_testing)
     testing_dataloader = torch.utils.data.DataLoader(testing_dataset, batch_size=batch_size, shuffle=False, drop_last=False)
 
+    # Define the output file path for the model checkpoint
+    output_file_path = Path('models/checkpoints/model.pth')
+    output_file_path.parent.mkdir(parents=True, exist_ok=True)
+
     # Training loop
     for t in range(epochs):
         print(f"Epoch {t+1}\n-------------------------------")
@@ -271,21 +271,16 @@ def main():
         writer.add_figure("Piano_Roll/train/prediction", piano_roll_training_prediction_plot, t)
         writer.add_figure("Piano_Roll/train/target", piano_roll_training_target_plot, t)
         piano_roll_test_prediction, piano_roll_test_prediction_plot, piano_roll_test_target_plot = generate_predictions(model, device, testing_dataloader, num_eval_batches, start_batch=0, plot_path='test')
-        # writer.add_figure("Piano_Roll/test/prediction", piano_roll_test_prediction_plot, t)
-        # writer.add_figure("Piano_Roll/test/target", piano_roll_test_target_plot, t)
-        # TODO: add MIDI output
-        # if t % 50 == 0: 
-        #     midi_output_path = os.path.join(midi_output_dir, f'output_training_{t}')
-        #     predictions_to_midi(piano_roll_training_prediction, midi_output_path)
-        #     midi_output_path = os.path.join(midi_output_dir, f'output_test_{t}')
-        #     predictions_to_midi(piano_roll_test_prediction, midi_output_path)
+        writer.add_figure("Piano_Roll/test/prediction", piano_roll_test_prediction_plot, t)
+        writer.add_figure("Piano_Roll/test/target", piano_roll_test_target_plot, t)
+        # Save model ckpt every 100 epochs
+        if t % 100 == 0:
+            torch.save(model.state_dict(), output_file_path)
         writer.step()  
 
     writer.close()
 
-    # Save the model checkpoint
-    output_file_path = Path('models/checkpoints/model.pth')
-    output_file_path.parent.mkdir(parents=True, exist_ok=True)
+    # Save the final model checkpoint
     torch.save(model.state_dict(), output_file_path)
     print("Saved PyTorch Model State to model.pth")
 
