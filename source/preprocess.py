@@ -116,11 +116,19 @@ def main():
 
     # Do preprocessing
     X, Y = prepare_data(audio_files, midi_files, spectrogram_transform)
-    print("Data preparation done.")
     
     # Print shapes of inputs and labels
     print(f"Inputs shape: {X.shape}")
     print(f"Labels shape: {Y.shape}")
+    
+    # Slice the data to reduce the number of frames
+    X = X[...,500:1500]  
+    Y = Y[...,500:1500]
+    # Print shapes of sliced inputs and labels
+    print(f"Sliced inputs shape: {X.shape}")
+    print(f"Sliced labels shape: {Y.shape}")
+    
+    print("Data preparation done.")
 
     # Simple split of data into training and testing sets
     X_training, X_testing = split_data(X, test_split)
