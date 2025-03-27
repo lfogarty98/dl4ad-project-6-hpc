@@ -185,6 +185,7 @@ def main():
     max_voices = params['train']['max_voices']
     hidden_size = params['model']['hidden_size']
     num_lstm_layers = params['model']['num_lstm_layers']
+    num_linear_layers = params['model']['num_linear_layers']
 
     # Create a SummaryWriter object to write the tensorboard logs
     tensorboard_path = logs.return_tensorboard_path()
@@ -217,7 +218,9 @@ def main():
     #     output_dim=num_midi_classes,
     #     batch_size=batch_size
     # ).to(device)
-    model = LinearNetwork(input_dim, hidden_size, num_midi_classes).to(device)
+    
+    model = LinearNetwork(input_dim, hidden_size, num_midi_classes, num_layers=num_linear_layers).to(device)
+    # model = LSTMNetwork(input_dim, hidden_size, num_midi_classes, num_lstm_layers).to(device)
     
     # Reshape data for the model training
     X_training, Y_training = reshape_and_batch(X_training, Y_training)

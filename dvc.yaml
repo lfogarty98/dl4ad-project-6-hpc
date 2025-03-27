@@ -22,6 +22,7 @@ stages:
     params:
     - model.hidden_size
     - model.num_lstm_layers
+    - model.num_linear_layers
     - train.epochs
     - train.batch_size
     - train.learning_rate

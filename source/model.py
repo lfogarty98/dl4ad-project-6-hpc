@@ -6,15 +6,25 @@ This model is a simple feedforward neural network, consisting solely of
 linear layers with ReLU activation functions.
 """
 class LinearNetwork(nn.Module):
-    def __init__(self, input_dim, hidden_dim, output_dim):
+    def __init__(self, input_dim, hidden_dim, output_dim, num_layers=3):
         super().__init__()
-        self.linear_stack = nn.Sequential(
-            nn.Linear(input_dim, hidden_dim),
-            nn.ReLU(),
-            nn.Linear(hidden_dim, hidden_dim),
-            nn.ReLU(),
-            nn.Linear(hidden_dim, output_dim)
-        )
+        layers = []
+        
+        # Input layer
+        layers.append(nn.Linear(input_dim, hidden_dim))
+        layers.append(nn.ReLU())
+        
+        # Hidden layers
+        for _ in range(num_layers - 1):
+            layers.append(nn.Linear(hidden_dim, hidden_dim))
+            layers.append(nn.ReLU())
+        
+        # Output layer
+        layers.append(nn.Linear(hidden_dim, output_dim))
+        
+        self.linear_stack = nn.Sequential(*layers)
+        
+        # Initialize weights
         for layer in self.linear_stack:
             if isinstance(layer, nn.Linear):
                 torch.nn.init.xavier_uniform_(layer.weight)
