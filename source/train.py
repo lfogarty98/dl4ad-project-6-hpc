@@ -5,7 +5,7 @@ import torch.nn as nn
 import torchinfo
 from utils import logs, config
 from pathlib import Path
-from model import NeuralNetwork, LinearNetwork, LSTMNetwork
+from model import NeuralNetwork, LinearNetwork, LSTMNetwork, FeedbackLSTMNetwork
 import pypianoroll as ppr
 import matplotlib
 matplotlib.use('Agg')
@@ -210,7 +210,6 @@ def main():
     # Create the model
     num_freq_bins = X_training.shape[1] # X has shape (1, num_freq_bins, total_num_frames) (assuming mono audio)
     num_midi_classes = 128
-    # input_dim = num_freq_bins + num_midi_classes
     input_dim = num_freq_bins
     
     # model = LinearNetwork(input_dim, hidden_size_linear, num_midi_classes, num_layers=num_linear_layers).to(device)
@@ -219,8 +218,18 @@ def main():
         hidden_dim_lstm=hidden_size_lstm,
         hidden_dim_linear=hidden_size_linear, 
         output_dim=num_midi_classes, 
-        num_lstm_layers=num_lstm_layers
+        num_lstm_layers=num_lstm_layers,
+        device=device
     ).to(device)
+    
+    # input_dim = num_freq_bins + num_midi_classes
+    # model = FeedbackLSTMNetwork(
+    #     input_dim=input_dim, 
+    #     hidden_dim_lstm=hidden_size_lstm,
+    #     hidden_dim_linear=hidden_size_linear, 
+    #     output_dim=num_midi_classes, 
+    #     num_lstm_layers=num_lstm_layers
+    # )
     
     # Reshape data for the model training
     X_training, Y_training = reshape_and_batch(X_training, Y_training)

@@ -38,17 +38,18 @@ class LinearNetwork(nn.Module):
 This model prepends an LSTM layer to a stack of linear layers.
 """
 class LSTMNetwork(nn.Module):
-    def __init__(self, input_dim, hidden_dim_lstm, hidden_dim_linear, output_dim, num_lstm_layers=1):
+    def __init__(self, input_dim, hidden_dim_lstm, hidden_dim_linear, output_dim, num_lstm_layers=1, device='cuda'):
         super().__init__()
         
         self.input_dim = input_dim
         self.hidden_dim_lstm = hidden_dim_lstm
         self.hidden_dim_linear = hidden_dim_linear
         self.num_lstm_layers = num_lstm_layers
+        self.device = device
         
         self.lstm = nn.LSTM(input_size=input_dim, hidden_size=self.hidden_dim_lstm, num_layers=self.num_lstm_layers)
-        self.hidden = torch.zeros(self.num_lstm_layers, 1, self.hidden_dim_lstm) # NOTE: docs say hidden should be of shape (D, N, H)
-        self.cell = torch.zeros(self.num_lstm_layers, 1, self.hidden_dim_lstm)
+        self.hidden = torch.zeros(self.num_lstm_layers, 1, self.hidden_dim_lstm, device=self.device) # NOTE: docs say hidden should be of shape (D, N, H)
+        self.cell = torch.zeros(self.num_lstm_layers, 1, self.hidden_dim_lstm, device=self.device)
         
         for layer in range(self.num_lstm_layers):
             torch.nn.init.xavier_uniform_(getattr(self.lstm, f'weight_ih_l{layer}'))
@@ -82,8 +83,70 @@ class LSTMNetwork(nn.Module):
         self.cell = self.cell.detach()
         
     def reset_hidden(self):
-        self.hidden = torch.zeros(self.num_lstm_layers, 1, self.hidden_dim_lstm)
-        self.cell = torch.zeros(self.num_lstm_layers, 1, self.hidden_dim_lstm)
+        self.hidden = torch.zeros(self.num_lstm_layers, 1, self.hidden_dim_lstm, device=self.device)
+        self.cell = torch.zeros(self.num_lstm_layers, 1, self.hidden_dim_lstm, device=self.device)
+
+
+"""
+This model is the same as LSTMNetwork, but includes output feedback.
+"""
+class FeedbackLSTMNetwork(nn.Module):
+    def __init__(self, input_dim, hidden_dim_lstm, hidden_dim_linear, output_dim, num_lstm_layers=1, device='cuda'):
+        super().__init__()
+        
+        self.input_dim = input_dim
+        self.hidden_dim_lstm = hidden_dim_lstm
+        self.hidden_dim_linear = hidden_dim_linear
+        self.num_lstm_layers = num_lstm_layers
+        self.device = device
+        self.last_piano_roll = torch.zeros(1, 1, 128, device=self.device) # initialize last_piano_roll with zeros
+        
+        self.lstm = nn.LSTM(input_size=input_dim, hidden_size=self.hidden_dim_lstm, num_layers=self.num_lstm_layers)
+        self.hidden = torch.zeros(self.num_lstm_layers, 1, self.hidden_dim_lstm, device=self.device) # NOTE: docs say hidden should be of shape (D, N, H)
+        self.cell = torch.zeros(self.num_lstm_layers, 1, self.hidden_dim_lstm, device=self.device)
+        
+        for layer in range(self.num_lstm_layers):
+            torch.nn.init.xavier_uniform_(getattr(self.lstm, f'weight_ih_l{layer}'))
+            torch.nn.init.xavier_uniform_(getattr(self.lstm, f'weight_hh_l{layer}'))
+            torch.nn.init.zeros_(getattr(self.lstm, f'bias_ih_l{layer}'))
+            torch.nn.init.zeros_(getattr(self.lstm, f'bias_hh_l{layer}'))
+        
+        self.relu = nn.ReLU()
+        
+        self.linear_stack = nn.Sequential(
+            # nn.Linear(input_dim, hidden_dim),
+            nn.Linear(self.hidden_dim_lstm, self.hidden_dim_linear), # for connecting to LSTM
+            nn.ReLU(),
+            nn.Linear(self.hidden_dim_linear, self.hidden_dim_linear),
+            nn.ReLU(),
+            nn.Linear(self.hidden_dim_linear, output_dim)
+        )
+        for layer in self.linear_stack:
+            if isinstance(layer, nn.Linear):
+                torch.nn.init.xavier_uniform_(layer.weight)
+                torch.nn.init.zeros_(layer.bias)
+
+    def forward(self, x):
+        x = torch.cat((x, self.last_piano_roll[:x.shape[0], :, :]), dim=-1) 
+        x, (self.hidden, self.cell) = self.lstm(x, (self.hidden, self.cell))
+        x = self.relu(x)
+        x = self.linear_stack(x)
+        self.last_piano_roll = x
+        return x
+    
+    def detach_hidden(self):
+        self.hidden = self.hidden.detach()
+        self.cell = self.cell.detach()
+        
+    def detach_piano_roll(self):
+        self.last_piano_roll = self.last_piano_roll.detach()
+            
+    def reset_hidden(self):
+        self.hidden = torch.zeros(self.num_lstm_layers, 1, self.hidden_dim_lstm, device=self.device)
+        self.cell = torch.zeros(self.num_lstm_layers, 1, self.hidden_dim_lstm, device=self.device)
+
+    def reset_piano_roll(self):
+        self.last_piano_roll = torch.zeros(1, 1, 128, device=self.device)
 
 """
 Original model we began with, which consists of an LSTM layer followed by a linear layer.
