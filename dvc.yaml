@@ -20,7 +20,8 @@ stages:
     - source/model.py
     - data/processed/
     params:
-    - model.hidden_size
+    - model.hidden_size_lstm
+    - model.hidden_size_linear
     - model.num_lstm_layers
     - model.num_linear_layers
     - train.epochs

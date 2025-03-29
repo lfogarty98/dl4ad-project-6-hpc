@@ -15,14 +15,15 @@ preprocess:
   test_split: 0.2 # Fraction of data to use for testing
 
 model:
-  hidden_size: 500  # Number of hidden units in the RNN
-  num_lstm_layers: 5  # Number of LSTM layers in the RNN
-  num_linear_layers: 5
+  hidden_size_lstm: 100  # Number of hidden units in the RNN
+  hidden_size_linear: 100  # Number of hidden units in the linear layers
+  num_lstm_layers: 1  # Number of LSTM layers in the RNN
+  num_linear_layers: 3
 
 train:
   epochs: 1000  # Number of epochs to train the model
   batch_size: 64  # Batch size for training
-  learning_rate: 0.01  # Learning rate for the optimizer
+  learning_rate: 0.0005  # Learning rate for the optimizer
   device_request: 'cuda'  # Device to use for training (cpu or cuda)
   num_eval_batches: 10  # Number of batches to evaluate on during training
   lambda_reg: 0.0 # Regularization control parameter

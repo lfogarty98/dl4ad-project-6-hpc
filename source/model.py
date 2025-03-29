@@ -38,16 +38,17 @@ class LinearNetwork(nn.Module):
 This model prepends an LSTM layer to a stack of linear layers.
 """
 class LSTMNetwork(nn.Module):
-    def __init__(self, input_dim, hidden_dim, output_dim, num_lstm_layers=1):
+    def __init__(self, input_dim, hidden_dim_lstm, hidden_dim_linear, output_dim, num_lstm_layers=1):
         super().__init__()
         
         self.input_dim = input_dim
-        self.hidden_dim = hidden_dim
+        self.hidden_dim_lstm = hidden_dim_lstm
+        self.hidden_dim_linear = hidden_dim_linear
         self.num_lstm_layers = num_lstm_layers
         
-        self.lstm = nn.LSTM(input_size=input_dim, hidden_size=hidden_dim, num_layers=num_lstm_layers)
-        self.hidden = torch.zeros(self.num_lstm_layers, 1, hidden_dim) # NOTE: docs say hidden should be of shape (D, N, H)
-        self.cell = torch.zeros(self.num_lstm_layers, 1, hidden_dim)
+        self.lstm = nn.LSTM(input_size=input_dim, hidden_size=self.hidden_dim_lstm, num_layers=self.num_lstm_layers)
+        self.hidden = torch.zeros(self.num_lstm_layers, 1, self.hidden_dim_lstm) # NOTE: docs say hidden should be of shape (D, N, H)
+        self.cell = torch.zeros(self.num_lstm_layers, 1, self.hidden_dim_lstm)
         
         for layer in range(self.num_lstm_layers):
             torch.nn.init.xavier_uniform_(getattr(self.lstm, f'weight_ih_l{layer}'))
@@ -59,11 +60,11 @@ class LSTMNetwork(nn.Module):
         
         self.linear_stack = nn.Sequential(
             # nn.Linear(input_dim, hidden_dim),
-            nn.Linear(hidden_dim, hidden_dim), # for connecting to LSTM
+            nn.Linear(self.hidden_dim_lstm, self.hidden_dim_linear), # for connecting to LSTM
             nn.ReLU(),
-            nn.Linear(hidden_dim, hidden_dim),
+            nn.Linear(self.hidden_dim_linear, self.hidden_dim_linear),
             nn.ReLU(),
-            nn.Linear(hidden_dim, output_dim)
+            nn.Linear(self.hidden_dim_linear, output_dim)
         )
         for layer in self.linear_stack:
             if isinstance(layer, nn.Linear):
@@ -81,8 +82,8 @@ class LSTMNetwork(nn.Module):
         self.cell = self.cell.detach()
         
     def reset_hidden(self):
-        self.hidden = torch.zeros(self.num_lstm_layers, 1, self.hidden_dim)
-        self.cell = torch.zeros(self.num_lstm_layers, 1, self.hidden_dim)
+        self.hidden = torch.zeros(self.num_lstm_layers, 1, self.hidden_dim_lstm)
+        self.cell = torch.zeros(self.num_lstm_layers, 1, self.hidden_dim_lstm)
 
 """
 Original model we began with, which consists of an LSTM layer followed by a linear layer.

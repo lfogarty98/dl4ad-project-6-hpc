@@ -32,7 +32,7 @@ def train_epoch(dataloader, model, loss_fn, optimizer, device, writer, epoch, la
     # Reset the last_piano_roll state before each training pass
     # model.last_piano_roll = torch.zeros(model.batch_size, 1, 128).to(device) 
     # Reset the hidden state before each training pass
-    # model.reset_hidden()
+    model.reset_hidden()
     model.train()
     for batch, (X, y) in enumerate(dataloader):
         X, y = X.to(device), y.to(device)
@@ -50,7 +50,7 @@ def train_epoch(dataloader, model, loss_fn, optimizer, device, writer, epoch, la
         
         loss.backward()  # Retain graph for the next iteration
         optimizer.step()
-        # model.detach_hidden()  # Detach hidden state to avoid backpropagation through time
+        model.detach_hidden()  # Detach hidden state to avoid backpropagation through time
         optimizer.zero_grad()
         
         writer.add_scalar("Batch_Loss/train", loss.item(), batch + epoch * len(dataloader))
@@ -183,7 +183,8 @@ def main():
     num_eval_batches = params['train']['num_eval_batches']
     lambda_reg = params['train']['lambda_reg']
     max_voices = params['train']['max_voices']
-    hidden_size = params['model']['hidden_size']
+    hidden_size_lstm = params['model']['hidden_size_lstm']
+    hidden_size_linear = params['model']['hidden_size_linear']
     num_lstm_layers = params['model']['num_lstm_layers']
     num_linear_layers = params['model']['num_linear_layers']
 
@@ -211,16 +212,15 @@ def main():
     num_midi_classes = 128
     # input_dim = num_freq_bins + num_midi_classes
     input_dim = num_freq_bins
-    # model = NeuralNetwork(
-    #     input_dim=input_dim,
-    #     hidden_dim=hidden_size,
-    #     num_lstm_layers=num_lstm_layers,
-    #     output_dim=num_midi_classes,
-    #     batch_size=batch_size
-    # ).to(device)
     
-    model = LinearNetwork(input_dim, hidden_size, num_midi_classes, num_layers=num_linear_layers).to(device)
-    # model = LSTMNetwork(input_dim, hidden_size, num_midi_classes, num_lstm_layers).to(device)
+    # model = LinearNetwork(input_dim, hidden_size_linear, num_midi_classes, num_layers=num_linear_layers).to(device)
+    model = LSTMNetwork(
+        input_dim=input_dim, 
+        hidden_dim_lstm=hidden_size_lstm,
+        hidden_dim_linear=hidden_size_linear, 
+        output_dim=num_midi_classes, 
+        num_lstm_layers=num_lstm_layers
+    ).to(device)
     
     # Reshape data for the model training
     X_training, Y_training = reshape_and_batch(X_training, Y_training)
