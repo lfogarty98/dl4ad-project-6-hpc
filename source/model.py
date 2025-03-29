@@ -38,13 +38,14 @@ class LinearNetwork(nn.Module):
 This model prepends an LSTM layer to a stack of linear layers.
 """
 class LSTMNetwork(nn.Module):
-    def __init__(self, input_dim, hidden_dim_lstm, hidden_dim_linear, output_dim, num_lstm_layers=1, device='cuda'):
+    def __init__(self, input_dim, hidden_dim_lstm, hidden_dim_linear, output_dim, num_linear_layers=3, num_lstm_layers=1, device='cuda'):
         super().__init__()
         
         self.input_dim = input_dim
         self.hidden_dim_lstm = hidden_dim_lstm
         self.hidden_dim_linear = hidden_dim_linear
         self.num_lstm_layers = num_lstm_layers
+        self.num_linear_layers = num_linear_layers
         self.device = device
         
         self.lstm = nn.LSTM(input_size=input_dim, hidden_size=self.hidden_dim_lstm, num_layers=self.num_lstm_layers)
@@ -59,14 +60,16 @@ class LSTMNetwork(nn.Module):
         
         self.relu = nn.ReLU()
         
-        self.linear_stack = nn.Sequential(
-            # nn.Linear(input_dim, hidden_dim),
-            nn.Linear(self.hidden_dim_lstm, self.hidden_dim_linear), # for connecting to LSTM
-            nn.ReLU(),
-            nn.Linear(self.hidden_dim_linear, self.hidden_dim_linear),
-            nn.ReLU(),
-            nn.Linear(self.hidden_dim_linear, output_dim)
-        )
+        linear_layers = []
+        linear_layers.append(nn.Linear(self.hidden_dim_lstm, self.hidden_dim_linear))
+        linear_layers.append(nn.ReLU())
+        for _ in range(self.num_linear_layers - 1):
+            linear_layers.append(nn.Linear(self.hidden_dim_linear, self.hidden_dim_linear))
+            linear_layers.append(nn.ReLU())
+        linear_layers.append(nn.Linear(self.hidden_dim_linear, output_dim))
+        
+        self.linear_stack = nn.Sequential(*linear_layers)
+        
         for layer in self.linear_stack:
             if isinstance(layer, nn.Linear):
                 torch.nn.init.xavier_uniform_(layer.weight)
@@ -91,15 +94,17 @@ class LSTMNetwork(nn.Module):
 This model is the same as LSTMNetwork, but includes output feedback.
 """
 class FeedbackLSTMNetwork(nn.Module):
-    def __init__(self, input_dim, hidden_dim_lstm, hidden_dim_linear, output_dim, num_lstm_layers=1, device='cuda'):
+    def __init__(self, input_dim, hidden_dim_lstm, hidden_dim_linear, output_dim, num_linear_layers, num_lstm_layers, batch_size, device='cuda'):
         super().__init__()
         
         self.input_dim = input_dim
         self.hidden_dim_lstm = hidden_dim_lstm
         self.hidden_dim_linear = hidden_dim_linear
         self.num_lstm_layers = num_lstm_layers
+        self.num_linear_layers = num_linear_layers
         self.device = device
-        self.last_piano_roll = torch.zeros(1, 1, 128, device=self.device) # initialize last_piano_roll with zeros
+        self.batch_size = batch_size
+        self.last_piano_roll = torch.zeros(self.batch_size, 1, 128, device=self.device) # initialize last_piano_roll with zeros
         
         self.lstm = nn.LSTM(input_size=input_dim, hidden_size=self.hidden_dim_lstm, num_layers=self.num_lstm_layers)
         self.hidden = torch.zeros(self.num_lstm_layers, 1, self.hidden_dim_lstm, device=self.device) # NOTE: docs say hidden should be of shape (D, N, H)
@@ -113,14 +118,16 @@ class FeedbackLSTMNetwork(nn.Module):
         
         self.relu = nn.ReLU()
         
-        self.linear_stack = nn.Sequential(
-            # nn.Linear(input_dim, hidden_dim),
-            nn.Linear(self.hidden_dim_lstm, self.hidden_dim_linear), # for connecting to LSTM
-            nn.ReLU(),
-            nn.Linear(self.hidden_dim_linear, self.hidden_dim_linear),
-            nn.ReLU(),
-            nn.Linear(self.hidden_dim_linear, output_dim)
-        )
+        linear_layers = []
+        linear_layers.append(nn.Linear(self.hidden_dim_lstm, self.hidden_dim_linear))
+        linear_layers.append(nn.ReLU())
+        for _ in range(self.num_linear_layers - 1):
+            linear_layers.append(nn.Linear(self.hidden_dim_linear, self.hidden_dim_linear))
+            linear_layers.append(nn.ReLU())
+        linear_layers.append(nn.Linear(self.hidden_dim_linear, output_dim))
+        
+        self.linear_stack = nn.Sequential(*linear_layers)
+        
         for layer in self.linear_stack:
             if isinstance(layer, nn.Linear):
                 torch.nn.init.xavier_uniform_(layer.weight)
@@ -146,7 +153,7 @@ class FeedbackLSTMNetwork(nn.Module):
         self.cell = torch.zeros(self.num_lstm_layers, 1, self.hidden_dim_lstm, device=self.device)
 
     def reset_piano_roll(self):
-        self.last_piano_roll = torch.zeros(1, 1, 128, device=self.device)
+        self.last_piano_roll = torch.zeros(self.batch_size, 1, 128, device=self.device)
 
 """
 Original model we began with, which consists of an LSTM layer followed by a linear layer.

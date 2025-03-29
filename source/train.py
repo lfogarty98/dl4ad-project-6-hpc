@@ -29,10 +29,8 @@ def train_epoch(dataloader, model, loss_fn, optimizer, device, writer, epoch, la
     size = len(dataloader.dataset)
     num_batches = len(dataloader)
     train_loss = 0 
-    # Reset the last_piano_roll state before each training pass
-    # model.last_piano_roll = torch.zeros(model.batch_size, 1, 128).to(device) 
-    # Reset the hidden state before each training pass
     model.reset_hidden()
+    model.reset_piano_roll()
     model.train()
     for batch, (X, y) in enumerate(dataloader):
         X, y = X.to(device), y.to(device)
@@ -51,6 +49,7 @@ def train_epoch(dataloader, model, loss_fn, optimizer, device, writer, epoch, la
         loss.backward()  # Retain graph for the next iteration
         optimizer.step()
         model.detach_hidden()  # Detach hidden state to avoid backpropagation through time
+        model.detach_piano_roll()  # Detach last_piano_roll to avoid backpropagation through time
         optimizer.zero_grad()
         
         writer.add_scalar("Batch_Loss/train", loss.item(), batch + epoch * len(dataloader))
@@ -213,23 +212,28 @@ def main():
     input_dim = num_freq_bins
     
     # model = LinearNetwork(input_dim, hidden_size_linear, num_midi_classes, num_layers=num_linear_layers).to(device)
-    model = LSTMNetwork(
+    
+    # model = LSTMNetwork(
+    #     input_dim=input_dim, 
+    #     hidden_dim_lstm=hidden_size_lstm,
+    #     hidden_dim_linear=hidden_size_linear, 
+    #     output_dim=num_midi_classes, 
+    #     num_lstm_layers=num_lstm_layers,
+    #     num_linear_layers=num_linear_layers,
+    #     device=device
+    # ).to(device)
+    
+    input_dim = num_freq_bins + num_midi_classes
+    model = FeedbackLSTMNetwork(
         input_dim=input_dim, 
         hidden_dim_lstm=hidden_size_lstm,
         hidden_dim_linear=hidden_size_linear, 
         output_dim=num_midi_classes, 
         num_lstm_layers=num_lstm_layers,
+        num_linear_layers=num_linear_layers,
+        batch_size=batch_size,
         device=device
-    ).to(device)
-    
-    # input_dim = num_freq_bins + num_midi_classes
-    # model = FeedbackLSTMNetwork(
-    #     input_dim=input_dim, 
-    #     hidden_dim_lstm=hidden_size_lstm,
-    #     hidden_dim_linear=hidden_size_linear, 
-    #     output_dim=num_midi_classes, 
-    #     num_lstm_layers=num_lstm_layers
-    # )
+    )
     
     # Reshape data for the model training
     X_training, Y_training = reshape_and_batch(X_training, Y_training)
@@ -255,9 +259,9 @@ def main():
     # NOTE: shuffle disabled to preserve time ordering of frames/batches 
     # NOTE: drop_last enabled to ensure all batches have the same size, so that input-output concatenation in model works
     training_dataset = torch.utils.data.TensorDataset(X_training, Y_training)
-    training_dataloader = torch.utils.data.DataLoader(training_dataset, batch_size=batch_size, shuffle=False, drop_last=False)
+    training_dataloader = torch.utils.data.DataLoader(training_dataset, batch_size=batch_size, shuffle=False, drop_last=True)
     testing_dataset = torch.utils.data.TensorDataset(X_testing, Y_testing)
-    testing_dataloader = torch.utils.data.DataLoader(testing_dataset, batch_size=batch_size, shuffle=False, drop_last=False)
+    testing_dataloader = torch.utils.data.DataLoader(testing_dataset, batch_size=batch_size, shuffle=False, drop_last=True)
 
     # Define the output file path for the model checkpoint
     output_file_path = Path('models/checkpoints/model.pth')

@@ -122,8 +122,8 @@ def main():
     print(f"Labels shape: {Y.shape}")
     
     # Slice the data to reduce the number of frames
-    X = X[...,500:1500]  
-    Y = Y[...,500:1500]
+    # X = X[...,500:4500]  
+    # Y = Y[...,500:4500]
     # Print shapes of sliced inputs and labels
     print(f"Sliced inputs shape: {X.shape}")
     print(f"Sliced labels shape: {Y.shape}")
