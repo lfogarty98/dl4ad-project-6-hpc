@@ -28,9 +28,11 @@ def train_epoch(dataloader, model, loss_fn, optimizer, device, writer, epoch, la
     """
     size = len(dataloader.dataset)
     num_batches = len(dataloader)
-    train_loss = 0 
-    model.reset_hidden()
-    model.reset_piano_roll()
+    train_loss = 0
+    if isinstance(model, (LSTMNetwork, FeedbackLSTMNetwork)):
+        model.reset_hidden()
+    if isinstance(model, FeedbackLSTMNetwork):
+        model.reset_piano_roll()
     model.train()
     for batch, (X, y) in enumerate(dataloader):
         X, y = X.to(device), y.to(device)
@@ -48,8 +50,10 @@ def train_epoch(dataloader, model, loss_fn, optimizer, device, writer, epoch, la
         
         loss.backward()  # Retain graph for the next iteration
         optimizer.step()
-        model.detach_hidden()  # Detach hidden state to avoid backpropagation through time
-        model.detach_piano_roll()  # Detach last_piano_roll to avoid backpropagation through time
+        if isinstance(model, (LSTMNetwork, FeedbackLSTMNetwork)):
+            model.detach_hidden()  # Detach hidden state to avoid backpropagation through time
+        if isinstance(model, FeedbackLSTMNetwork):
+            model.detach_piano_roll()  # Detach last_piano_roll to avoid backpropagation through time
         optimizer.zero_grad()
         
         writer.add_scalar("Batch_Loss/train", loss.item(), batch + epoch * len(dataloader))
@@ -109,11 +113,11 @@ def generate_predictions(model, device, dataloader, num_eval_batches, start_batc
             target = torch.cat((target, y), 0)
     # Create plots
     piano_roll_prediction_plot = plot_piano_roll(prediction, "Predicted Piano Roll")
-    # plt.savefig(f'/Users/DiarmuidFogarty/repos/dl4ad-project-6-hpc/plots/{plot_path}/predicted_piano_roll.png')
-    # # plt.close()
+    plt.savefig(os.path.join(os.getenv('DEFAULT_DIR'), f'plots/{plot_path}/predicted_piano_roll.png'))
+    plt.close()
     piano_roll_target_plot = plot_piano_roll(target, "Target Piano Roll")
-    # plt.savefig(f'/Users/DiarmuidFogarty/repos/dl4ad-project-6-hpc/plots/{plot_path}/target_piano_roll.png')
-    # # plt.close()
+    plt.savefig(os.path.join(os.getenv('DEFAULT_DIR'), f'plots/{plot_path}/target_piano_roll.png'))
+    plt.close()
     return prediction, piano_roll_prediction_plot, piano_roll_target_plot
 
 def plot_piano_roll(piano_roll, plot_title):
@@ -211,7 +215,7 @@ def main():
     num_midi_classes = 128
     input_dim = num_freq_bins
     
-    # model = LinearNetwork(input_dim, hidden_size_linear, num_midi_classes, num_layers=num_linear_layers).to(device)
+    model = LinearNetwork(input_dim, hidden_size_linear, num_midi_classes, num_layers=num_linear_layers).to(device)
     
     # model = LSTMNetwork(
     #     input_dim=input_dim, 
@@ -223,17 +227,17 @@ def main():
     #     device=device
     # ).to(device)
     
-    input_dim = num_freq_bins + num_midi_classes
-    model = FeedbackLSTMNetwork(
-        input_dim=input_dim, 
-        hidden_dim_lstm=hidden_size_lstm,
-        hidden_dim_linear=hidden_size_linear, 
-        output_dim=num_midi_classes, 
-        num_lstm_layers=num_lstm_layers,
-        num_linear_layers=num_linear_layers,
-        batch_size=batch_size,
-        device=device
-    )
+    # input_dim = num_freq_bins + num_midi_classes
+    # model = FeedbackLSTMNetwork(
+    #     input_dim=input_dim, 
+    #     hidden_dim_lstm=hidden_size_lstm,
+    #     hidden_dim_linear=hidden_size_linear, 
+    #     output_dim=num_midi_classes, 
+    #     num_lstm_layers=num_lstm_layers,
+    #     num_linear_layers=num_linear_layers,
+    #     batch_size=batch_size,
+    #     device=device
+    # ).to(device)
     
     # Reshape data for the model training
     X_training, Y_training = reshape_and_batch(X_training, Y_training)
