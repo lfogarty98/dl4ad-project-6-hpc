@@ -1,10 +1,14 @@
+import utils.debug
+
 import torch
 import torch.nn as nn
 import torchinfo
 from utils import logs, config
 from pathlib import Path
-from model import NeuralNetwork
+from model import NeuralNetwork, LinearNetwork, LSTMNetwork, FeedbackLSTMNetwork
 import pypianoroll as ppr
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import os
 
@@ -13,12 +17,7 @@ def regularizer(prediction, threshold=10):
     Regularizer which penalizes frames that have too many active notes by returning a 
     penalty that increases as more notes exceed the given threshold.
     """
-    penalty = 0.0  # Initialize penalty
-    for frame in prediction:  # Iterate over each frame (Shape: (num_frames, 1, 128))
-        active_notes = torch.sum(frame > 0.5).item()  # Count nonzero (active) notes in frame
-        if active_notes > threshold:  
-            penalty += (active_notes - threshold) ** 2 # Add (linear) penalty for exceeding threshold
-    penalty /= prediction.shape[0]  # Average over all frames
+    penalty = prediction.squeeze().sum()
     return penalty     
 
 def train_epoch(dataloader, model, loss_fn, optimizer, device, writer, epoch, lambda_reg=0.1, max_voices=10):
@@ -29,9 +28,11 @@ def train_epoch(dataloader, model, loss_fn, optimizer, device, writer, epoch, la
     """
     size = len(dataloader.dataset)
     num_batches = len(dataloader)
-    train_loss = 0 
-    # Reset the last_piano_roll state before each training pass
-    model.last_piano_roll = torch.zeros(model.batch_size, 1, 128).to(device) 
+    train_loss = 0
+    if isinstance(model, (LSTMNetwork, FeedbackLSTMNetwork)):
+        model.reset_hidden()
+    if isinstance(model, FeedbackLSTMNetwork):
+        model.reset_piano_roll()
     model.train()
     for batch, (X, y) in enumerate(dataloader):
         X, y = X.to(device), y.to(device)
@@ -40,17 +41,23 @@ def train_epoch(dataloader, model, loss_fn, optimizer, device, writer, epoch, la
         # Compute base loss (scaled by 10)
         base_loss = 1 * loss_fn(pred, y)
 
-        # Compute regularization penalty
-        reg_loss = lambda_reg * regularizer(torch.sigmoid(pred), threshold=max_voices)
+        # # Compute regularization penalty
+        # reg_loss = lambda_reg * regularizer(pred, threshold=max_voices)
 
         # Total loss (base loss + regularization)
-        loss = base_loss + reg_loss  
+        # loss = base_loss + reg_loss
+        loss = base_loss
         
-        loss.backward()
+        loss.backward()  # Retain graph for the next iteration
         optimizer.step()
+        if isinstance(model, (LSTMNetwork, FeedbackLSTMNetwork)):
+            model.detach_hidden()  # Detach hidden state to avoid backpropagation through time
+        if isinstance(model, FeedbackLSTMNetwork):
+            model.detach_piano_roll()  # Detach last_piano_roll to avoid backpropagation through time
         optimizer.zero_grad()
+        
         writer.add_scalar("Batch_Loss/train", loss.item(), batch + epoch * len(dataloader))
-        writer.add_scalar("Batch_Regularization_Loss/train", reg_loss, batch + epoch * len(dataloader))  # Log reg loss separately
+        # writer.add_scalar("Batch_Regularization_Loss/train", reg_loss, batch + epoch * len(dataloader))  # Log reg loss separately
         train_loss += loss.item()
         if batch % 100 == 0:
             loss_value = loss.item()
@@ -77,7 +84,7 @@ def predictions_to_midi(predicted_piano_roll, path):
     ppr_object = ppr.Multitrack(tracks=[ppr.StandardTrack(pianoroll=predicted_piano_roll)])
     ppr.write(path, ppr_object)
 
-def generate_predictions(model, device, dataloader, num_eval_batches, start_batch=0):
+def generate_predictions(model, device, dataloader, num_eval_batches, start_batch=0, plot_path='training'):
     """
     Generate predictions (concantenated normalized piano roll matrices) using the model and the testing dataloader.
     Since the training data is effectively one long stream of audio and midi, num_eval_batches specifies the number
@@ -100,12 +107,17 @@ def generate_predictions(model, device, dataloader, num_eval_batches, start_batc
             X = X.to(device)
             y = y.to(device)
             predicted_batch = model(X)
-            predicted_batch_binary = (predicted_batch > 0.5).float()  # Binarize the prediction
-            prediction = torch.cat((prediction, predicted_batch_binary), 0)
+            # predicted_batch_binary = (predicted_batch > 0.5).float()  # Binarize the prediction
+            predicted_batch = torch.sigmoid(predicted_batch)
+            prediction = torch.cat((prediction, predicted_batch), 0)
             target = torch.cat((target, y), 0)
     # Create plots
     piano_roll_prediction_plot = plot_piano_roll(prediction, "Predicted Piano Roll")
+    plt.savefig(os.path.join(os.getenv('DEFAULT_DIR'), f'plots/{plot_path}/predicted_piano_roll.png'))
+    plt.close()
     piano_roll_target_plot = plot_piano_roll(target, "Target Piano Roll")
+    plt.savefig(os.path.join(os.getenv('DEFAULT_DIR'), f'plots/{plot_path}/target_piano_roll.png'))
+    plt.close()
     return prediction, piano_roll_prediction_plot, piano_roll_target_plot
 
 def plot_piano_roll(piano_roll, plot_title):
@@ -116,7 +128,7 @@ def plot_piano_roll(piano_roll, plot_title):
     piano_roll = piano_roll.cpu().numpy().squeeze()
     piano_roll = piano_roll.T
     fig, ax = plt.subplots(figsize=(12, 6))
-    ax.imshow(piano_roll, cmap="gray", aspect="auto", origin="lower")
+    ax.imshow(piano_roll, cmap="gray", aspect="auto", origin="lower", vmin=0, vmax=1)
     ax.set_xlabel("Frame")
     ax.set_ylabel("MIDI Note")
     ax.set_title(plot_title)
@@ -174,8 +186,10 @@ def main():
     num_eval_batches = params['train']['num_eval_batches']
     lambda_reg = params['train']['lambda_reg']
     max_voices = params['train']['max_voices']
-    hidden_size = params['model']['hidden_size']
+    hidden_size_lstm = params['model']['hidden_size_lstm']
+    hidden_size_linear = params['model']['hidden_size_linear']
     num_lstm_layers = params['model']['num_lstm_layers']
+    num_linear_layers = params['model']['num_linear_layers']
 
     # Create a SummaryWriter object to write the tensorboard logs
     tensorboard_path = logs.return_tensorboard_path()
@@ -199,14 +213,31 @@ def main():
     # Create the model
     num_freq_bins = X_training.shape[1] # X has shape (1, num_freq_bins, total_num_frames) (assuming mono audio)
     num_midi_classes = 128
-    input_dim = num_freq_bins + num_midi_classes
-    model = NeuralNetwork(
-        input_dim=input_dim,
-        hidden_dim=hidden_size,
-        num_lstm_layers=num_lstm_layers,
-        output_dim=num_midi_classes,
-        batch_size=batch_size
-    ).to(device)
+    input_dim = num_freq_bins
+    
+    model = LinearNetwork(input_dim, hidden_size_linear, num_midi_classes, num_layers=num_linear_layers).to(device)
+    
+    # model = LSTMNetwork(
+    #     input_dim=input_dim, 
+    #     hidden_dim_lstm=hidden_size_lstm,
+    #     hidden_dim_linear=hidden_size_linear, 
+    #     output_dim=num_midi_classes, 
+    #     num_lstm_layers=num_lstm_layers,
+    #     num_linear_layers=num_linear_layers,
+    #     device=device
+    # ).to(device)
+    
+    # input_dim = num_freq_bins + num_midi_classes
+    # model = FeedbackLSTMNetwork(
+    #     input_dim=input_dim, 
+    #     hidden_dim_lstm=hidden_size_lstm,
+    #     hidden_dim_linear=hidden_size_linear, 
+    #     output_dim=num_midi_classes, 
+    #     num_lstm_layers=num_lstm_layers,
+    #     num_linear_layers=num_linear_layers,
+    #     batch_size=batch_size,
+    #     device=device
+    # ).to(device)
     
     # Reshape data for the model training
     X_training, Y_training = reshape_and_batch(X_training, Y_training)
@@ -216,7 +247,7 @@ def main():
     
     # Print the model summary
     input_size = (1, 1, num_freq_bins) # shape compliant with the model input
-    summary = torchinfo.summary(model, input_size, device=device)
+    # summary = torchinfo.summary(model, input_size, device=device)
     
     # Add the model graph to the tensorboard logs
     # NOTE: weird behaviour here after adding output feedback to the model
@@ -236,6 +267,10 @@ def main():
     testing_dataset = torch.utils.data.TensorDataset(X_testing, Y_testing)
     testing_dataloader = torch.utils.data.DataLoader(testing_dataset, batch_size=batch_size, shuffle=False, drop_last=True)
 
+    # Define the output file path for the model checkpoint
+    output_file_path = Path('models/checkpoints/model.pth')
+    output_file_path.parent.mkdir(parents=True, exist_ok=True)
+
     # Training loop
     for t in range(epochs):
         print(f"Epoch {t+1}\n-------------------------------")
@@ -252,25 +287,20 @@ def main():
         epoch_loss_test = test_epoch(testing_dataloader, model, loss_fn, device, writer)
         writer.add_scalar("Epoch_Loss/train", epoch_loss_train, t)
         writer.add_scalar("Epoch_Loss/test", epoch_loss_test, t)
-        piano_roll_training_prediction, piano_roll_training_prediction_plot, piano_roll_training_target_plot = generate_predictions(model, device, training_dataloader, num_eval_batches, start_batch=0)
+        piano_roll_training_prediction, piano_roll_training_prediction_plot, piano_roll_training_target_plot = generate_predictions(model, device, training_dataloader, num_eval_batches, start_batch=0, plot_path='train')
         writer.add_figure("Piano_Roll/train/prediction", piano_roll_training_prediction_plot, t)
         writer.add_figure("Piano_Roll/train/target", piano_roll_training_target_plot, t)
-        piano_roll_test_prediction, piano_roll_test_prediction_plot, piano_roll_test_target_plot = generate_predictions(model, device, testing_dataloader, num_eval_batches, start_batch=0)
+        piano_roll_test_prediction, piano_roll_test_prediction_plot, piano_roll_test_target_plot = generate_predictions(model, device, testing_dataloader, num_eval_batches, start_batch=0, plot_path='test')
         writer.add_figure("Piano_Roll/test/prediction", piano_roll_test_prediction_plot, t)
         writer.add_figure("Piano_Roll/test/target", piano_roll_test_target_plot, t)
-        # TODO: add MIDI output
-        # if t % 50 == 0: 
-        #     midi_output_path = os.path.join(midi_output_dir, f'output_training_{t}')
-        #     predictions_to_midi(piano_roll_training_prediction, midi_output_path)
-        #     midi_output_path = os.path.join(midi_output_dir, f'output_test_{t}')
-        #     predictions_to_midi(piano_roll_test_prediction, midi_output_path)
+        # Save model ckpt every 100 epochs
+        if t % 100 == 0:
+            torch.save(model.state_dict(), output_file_path)
         writer.step()  
 
     writer.close()
 
-    # Save the model checkpoint
-    output_file_path = Path('models/checkpoints/model.pth')
-    output_file_path.parent.mkdir(parents=True, exist_ok=True)
+    # Save the final model checkpoint
     torch.save(model.state_dict(), output_file_path)
     print("Saved PyTorch Model State to model.pth")
 

@@ -50,11 +50,14 @@ fi;
 echo ".git";
 } | while read file; do
     # --chown flag is needed for docker to avoid permission issues
-    rsync -aR --chown $(id -u):$(id -g) "$file" $TUSTU_EXP_TMP_DIR;
+    # rsync -aR --chown $(id -u):$(id -g) "$file" $TUSTU_EXP_TMP_DIR;
+    rsync -aR "$file" $TUSTU_EXP_TMP_DIR;
 done &&
 
 # Change the working directory to the temporary sub-directory
 cd $TUSTU_EXP_TMP_DIR &&
+
+source "$DEFAULT_DIR/venv/bin/activate"
 
 # Set the DVC cache directory to the shared cache located in the host directory
 echo "Setting DVC cache directory..." &&
@@ -68,11 +71,11 @@ fi &&
 
 # Run the experiment with passed parameters. Runs with the default parameters if none are passed.
 echo "Running experiment..." &&
-dvc exp run $EXP_PARAMS &&
+dvc exp run $EXP_PARAMS -f &&
 
 # Push the results to the DVC remote repository
 echo "Pushing experiment..." &&
-dvc exp push origin &&
+# dvc exp push origin &&
 
 # Clean up the temporary sub-directory
 echo "Cleaning up..." &&
